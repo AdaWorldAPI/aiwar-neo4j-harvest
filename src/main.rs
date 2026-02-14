@@ -95,6 +95,22 @@ enum Commands {
         #[arg(long, default_value = "AdaChessBot")]
         bot_name: String,
     },
+
+    /// Ingest live game data from stonksfish-ada harvester
+    LiveGames {
+        /// Directory containing .cypher files from stonksfish-ada
+        #[arg(short, long, default_value = "harvest/cypher")]
+        input: String,
+        /// Also read JSONL files from the JSON harvester
+        #[arg(long)]
+        jsonl: Option<String>,
+        /// Direct Neo4j ingestion (requires NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
+        #[arg(long)]
+        neo4j: bool,
+        /// Output directory for merged .cypher files
+        #[arg(short, long, default_value = "cypher")]
+        output: String,
+    },
 }
 
 fn load_graph() -> Result<serde_json::Value> {
@@ -319,7 +335,117 @@ async fn main() -> Result<()> {
         Commands::ChessBridge { output, bot_name } => {
             cmd_chess_bridge(&output, &bot_name)
         }
+
+        Commands::LiveGames { input, jsonl, neo4j, output } => {
+            cmd_live_games(&input, jsonl.as_deref(), neo4j, &output).await
+        }
     }
+}
+
+// ── Live Game Ingestion (from stonksfish-ada) ────────────────────
+
+async fn cmd_live_games(input: &str, jsonl: Option<&str>, direct_neo4j: bool, output: &str) -> Result<()> {
+    use std::path::Path;
+
+    println!("╔══════════════════════════════════════════════════════╗");
+    println!("║  Live Game Harvester (stonksfish-ada → Neo4j)        ║");
+    println!("║  Ingests .cypher and .jsonl from live Lichess games   ║");
+    println!("╚══════════════════════════════════════════════════════╝\n");
+
+    let input_path = Path::new(input);
+    if !input_path.exists() {
+        println!("Input directory '{}' not found.", input);
+        println!("Run stonksfish-ada first to generate harvest data:");
+        println!("  HARVEST_DIR=./harvest cargo run --bin stonksfish-ada --release");
+        return Ok(());
+    }
+
+    // Collect all .cypher files from the input directory
+    let mut cypher_files: Vec<_> = fs::read_dir(input_path)?
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().map(|ext| ext == "cypher").unwrap_or(false))
+        .collect();
+    cypher_files.sort_by_key(|e| e.file_name());
+
+    println!("Found {} .cypher files in {}", cypher_files.len(), input);
+
+    // Merge all cypher statements
+    let mut all_stmts: Vec<String> = Vec::new();
+    let mut total_lines = 0;
+
+    for entry in &cypher_files {
+        let content = fs::read_to_string(entry.path())?;
+        let lines: Vec<&str> = content.lines()
+            .filter(|l| !l.trim().is_empty() && !l.trim().starts_with("//"))
+            .collect();
+        total_lines += lines.len();
+        println!("  {} ({} statements)", entry.file_name().to_string_lossy(), lines.len());
+        all_stmts.push(content);
+    }
+
+    // Read JSONL if provided (for statistics/analysis)
+    let mut game_count = 0;
+    let mut total_moves = 0;
+    if let Some(jsonl_path) = jsonl {
+        let jsonl_file = Path::new(jsonl_path);
+        if jsonl_file.exists() {
+            let content = fs::read_to_string(jsonl_file)?;
+            for line in content.lines() {
+                if let Ok(record) = serde_json::from_str::<serde_json::Value>(line) {
+                    if record["type"] == "game" {
+                        game_count += 1;
+                        total_moves += record["total_moves"].as_u64().unwrap_or(0);
+                    }
+                }
+            }
+            println!("\nJSONL summary: {} games, {} total moves", game_count, total_moves);
+        }
+    }
+
+    // Write merged output
+    fs::create_dir_all(output)?;
+    let out_path = format!("{output}/live_games_merged.cypher");
+    let combined = all_stmts.join("\n");
+    fs::write(&out_path, &combined)?;
+    println!("\nMerged {} statements → {out_path}", total_lines);
+
+    // Direct Neo4j ingestion if requested
+    if direct_neo4j {
+        let uri = std::env::var("NEO4J_URI").expect("NEO4J_URI required for --neo4j");
+        let user = std::env::var("NEO4J_USER").unwrap_or_else(|_| "neo4j".to_string());
+        let password = std::env::var("NEO4J_PASSWORD").expect("NEO4J_PASSWORD required for --neo4j");
+
+        println!("\nIngesting into Neo4j at {uri}...");
+        let graph = neo4rs::Graph::new(&uri, &user, &password).await?;
+
+        let mut count = 0;
+        let mut errors = 0;
+        for stmt_block in &all_stmts {
+            for stmt in stmt_block.split(";\n") {
+                let trimmed = stmt.trim();
+                if trimmed.is_empty() || trimmed.starts_with("//") {
+                    continue;
+                }
+                match graph.run(neo4rs::query(trimmed)).await {
+                    Ok(_) => count += 1,
+                    Err(e) => {
+                        errors += 1;
+                        if errors <= 5 {
+                            eprintln!("  WARN: {e} | stmt: {}", &trimmed[..trimmed.len().min(80)]);
+                        }
+                    }
+                }
+            }
+        }
+        println!("Executed {} statements ({} errors)", count, errors);
+    }
+
+    println!("\nHarvest pipeline:");
+    println!("  stonksfish-ada (live games) → harvest/cypher/*.cypher");
+    println!("  aiwar-neo4j live-games      → {out_path}");
+    println!("  Compatible with chess-openings, chess-evals, chess-bridge data");
+
+    Ok(())
 }
 
 // ── Chess Command Implementations ────────────────────────────────
