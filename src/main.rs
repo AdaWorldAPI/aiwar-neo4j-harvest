@@ -1,16 +1,27 @@
 // aiwar-neo4j-harvest/src/main.rs
 //
-// AI War Cloud → Neo4j Harvester
-// Source: https://gitlab.com/sarahciston/aiwar
-// Target: Neo4j (Ada Sigma Graph successor patterns)
+// AI War Cloud + Chess Knowledge → Neo4j Harvester
+// Sources:
+//   - AI War Cloud: https://gitlab.com/sarahciston/aiwar
+//   - Chess openings: https://github.com/lichess-org/chess-openings
+//   - Chess variations: https://github.com/hayatbiralem/eco.json
+//   - Chess evaluations: https://database.lichess.org/#evals
+// Target: Neo4j / neo4j-rs (Ada Sigma Graph successor patterns)
 //
 // Usage:
-//   cargo run -- cypher          # Generate .cypher files
-//   cargo run -- neo4j           # Direct ingest (needs NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
-//   cargo run -- analyze         # Print graph statistics and novel pattern report
+//   cargo run -- cypher                    # Generate AI War .cypher files
+//   cargo run -- neo4j                     # Direct AI War ingest
+//   cargo run -- analyze                   # Print graph statistics
+//   cargo run --features chess -- chess-openings  # Harvest ECO openings
+//   cargo run --features chess -- chess-evals     # Harvest Lichess evaluations
+//   cargo run --features chess -- chess-bridge    # Generate cross-domain bridge
 
 mod model;
 mod ingest;
+#[cfg(feature = "chess")]
+mod chess_model;
+#[cfg(feature = "chess")]
+mod chess_ingest;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -18,7 +29,7 @@ use std::fs;
 
 #[derive(Parser)]
 #[command(name = "aiwar-neo4j")]
-#[command(about = "AI War Cloud graph → Neo4j ingestor")]
+#[command(about = "AI War Cloud + Chess Knowledge → Neo4j ingestor")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -26,7 +37,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Generate Cypher scripts for offline ingestion
+    /// Generate Cypher scripts for offline AI War ingestion
     Cypher {
         /// Output directory for .cypher files
         #[arg(short, long, default_value = "cypher")]
@@ -46,6 +57,44 @@ enum Commands {
     },
     /// Analyze graph patterns
     Analyze,
+
+    // ── Chess Harvest Commands (--features chess) ────────────────
+    /// Harvest ECO openings + eco.json into graph
+    #[cfg(feature = "chess")]
+    ChessOpenings {
+        /// Output directory for .cypher files
+        #[arg(short, long, default_value = "cypher")]
+        output: String,
+        /// Cache directory for downloaded data
+        #[arg(long, default_value = "data/chess")]
+        cache_dir: String,
+    },
+    /// Harvest Lichess evaluation database
+    #[cfg(feature = "chess")]
+    ChessEvals {
+        /// Path to Lichess eval JSONL file (download from database.lichess.org)
+        #[arg(long)]
+        eval_file: String,
+        /// Minimum Stockfish depth to include
+        #[arg(long, default_value = "40")]
+        depth_min: u32,
+        /// Maximum number of positions to ingest
+        #[arg(long, default_value = "100000")]
+        limit: usize,
+        /// Output directory for .cypher files
+        #[arg(short, long, default_value = "cypher")]
+        output: String,
+    },
+    /// Generate AI War ↔ Chess cross-domain bridge
+    #[cfg(feature = "chess")]
+    ChessBridge {
+        /// Output directory for .cypher files
+        #[arg(short, long, default_value = "cypher")]
+        output: String,
+        /// Bot name for Lichess Elo testing
+        #[arg(long, default_value = "AdaChessBot")]
+        bot_name: String,
+    },
 }
 
 fn load_graph() -> Result<serde_json::Value> {
@@ -256,5 +305,159 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Commands::Analyze => cmd_analyze(),
+
+        // ── Chess Harvest Commands ──────────────────────────────
+        #[cfg(feature = "chess")]
+        Commands::ChessOpenings { output, cache_dir } => {
+            cmd_chess_openings(&output, &cache_dir).await
+        }
+        #[cfg(feature = "chess")]
+        Commands::ChessEvals { eval_file, depth_min, limit, output } => {
+            cmd_chess_evals(&output, &eval_file, depth_min, limit)
+        }
+        #[cfg(feature = "chess")]
+        Commands::ChessBridge { output, bot_name } => {
+            cmd_chess_bridge(&output, &bot_name)
+        }
     }
+}
+
+// ── Chess Command Implementations ────────────────────────────────
+
+#[cfg(feature = "chess")]
+async fn cmd_chess_openings(output: &str, cache_dir: &str) -> Result<()> {
+    use std::path::Path;
+
+    println!("╔══════════════════════════════════════════════════════╗");
+    println!("║  Chess Opening Harvester                             ║");
+    println!("║  Sources: lichess-org/chess-openings + eco.json      ║");
+    println!("╚══════════════════════════════════════════════════════╝\n");
+
+    let cache = Path::new(cache_dir);
+    fs::create_dir_all(cache)?;
+    fs::create_dir_all(output)?;
+
+    let mut all_stmts: Vec<String> = Vec::new();
+
+    // 1. Chess constraints
+    println!("Generating chess constraints...");
+    all_stmts.extend(chess_ingest::chess_constraints());
+
+    // 2. Chess schema ontology (parallels AIRO pattern)
+    println!("Generating chess schema ontology...");
+    all_stmts.push("// ── Chess Schema Ontology ──".into());
+    all_stmts.extend(chess_ingest::chess_schema_cypher());
+
+    // 3. Download + parse Lichess openings (TSV)
+    println!("Downloading Lichess chess-openings...");
+    let openings = chess_ingest::download_openings(cache).await?;
+    all_stmts.push("// ── ECO Openings ──".into());
+    let opening_stmts = chess_ingest::openings_cypher(&openings);
+    println!("  Generated {} opening statements", opening_stmts.len());
+    all_stmts.extend(opening_stmts);
+
+    // 4. Download + parse eco.json (12K+ variations)
+    println!("Downloading eco.json variations...");
+    let eco_entries = chess_ingest::download_eco_json(cache).await?;
+    all_stmts.push("// ── eco.json Variations ──".into());
+    let eco_stmts = chess_ingest::eco_json_cypher(&eco_entries);
+    println!("  Generated {} eco.json statements", eco_stmts.len());
+    all_stmts.extend(eco_stmts);
+
+    // Write combined file
+    let combined = all_stmts.join("\n\n");
+    let out_path = format!("{output}/chess_openings.cypher");
+    fs::write(&out_path, &combined)?;
+
+    println!("\n  Generated {} total statements → {out_path}", all_stmts.len());
+    println!("  Openings: {}", openings.len());
+    println!("  eco.json: {} variations", eco_entries.len());
+    println!("\nReady for neo4j-rs Graph<MemoryBackend> or Neo4j server ingestion.");
+
+    Ok(())
+}
+
+#[cfg(feature = "chess")]
+fn cmd_chess_evals(output: &str, eval_file: &str, depth_min: u32, limit: usize) -> Result<()> {
+    use std::path::Path;
+
+    println!("╔══════════════════════════════════════════════════════╗");
+    println!("║  Chess Evaluation Harvester                          ║");
+    println!("║  Source: Lichess evaluation database (JSONL)         ║");
+    println!("╚══════════════════════════════════════════════════════╝\n");
+
+    fs::create_dir_all(output)?;
+
+    println!("Parsing {eval_file} (depth >= {depth_min}, limit {limit})...");
+    let positions = chess_ingest::parse_lichess_evals(
+        Path::new(eval_file),
+        depth_min,
+        limit,
+    )?;
+
+    let mut all_stmts: Vec<String> = Vec::new();
+    all_stmts.extend(chess_ingest::chess_constraints());
+    all_stmts.push("// ── Evaluated Positions ──".into());
+    let eval_stmts = chess_ingest::eval_positions_cypher(&positions);
+    println!("  Generated {} evaluation statements", eval_stmts.len());
+    all_stmts.extend(eval_stmts);
+
+    let combined = all_stmts.join("\n\n");
+    let out_path = format!("{output}/chess_evals.cypher");
+    fs::write(&out_path, &combined)?;
+
+    println!("\n  Generated {} total statements → {out_path}", all_stmts.len());
+    println!("  Positions: {}", positions.len());
+
+    Ok(())
+}
+
+#[cfg(feature = "chess")]
+fn cmd_chess_bridge(output: &str, bot_name: &str) -> Result<()> {
+    println!("╔══════════════════════════════════════════════════════╗");
+    println!("║  Chess ↔ AI War Cross-Domain Bridge                  ║");
+    println!("║  + Lichess Bot / Elo Testing Configuration           ║");
+    println!("╚══════════════════════════════════════════════════════╝\n");
+
+    fs::create_dir_all(output)?;
+
+    let mut all_stmts: Vec<String> = Vec::new();
+
+    // Bridge concepts
+    all_stmts.push("// ── Cross-Domain Bridge (Chess ↔ AI War) ──".into());
+    let bridge_stmts = chess_ingest::aiwar_bridge_cypher();
+    println!("  Generated {} bridge statements", bridge_stmts.len());
+    all_stmts.extend(bridge_stmts);
+
+    // Elo testing bot config
+    all_stmts.push("// ── Elo Testing Bot Configuration ──".into());
+    let elo_stmts = chess_ingest::elo_testing_cypher(bot_name);
+    all_stmts.extend(elo_stmts);
+
+    // Print Elo testing API info
+    println!("\n  Elo Testing APIs:");
+    println!("  ├── Lichess Bot API: https://lichess.org/api#tag/Bot");
+    println!("  │   • Create bot account, play rated games via UCI");
+    println!("  │   • Uses Glicko2 rating system (starts at 1500)");
+    println!("  │   • Protocol: ruci crate (Rust UCI implementation)");
+    println!("  │   • Guide: https://anmols.bearblog.dev/how-to-determine-chess-bot-elo-lichess/");
+    println!("  ├── CCRL: https://www.computerchess.org.uk/ccrl/404/");
+    println!("  │   • Submit engine for official CCRL Blitz/40/15 rating");
+    println!("  │   • Current top: Stockfish 3650 Elo (Feb 2026)");
+    println!("  ├── Chess-API: https://chess-api.com/");
+    println!("  │   • Free Stockfish 17 REST API for strength calibration");
+    println!("  │   • Use to benchmark our engine at fixed depth levels");
+    println!("  └── Self-play rating estimation:");
+    println!("       • Play 100+ games against Stockfish at fixed depths");
+    println!("       • Depth 1 ≈ 1100 Elo, Depth 5 ≈ 2000, Depth 20 ≈ 3000+");
+    println!("       • Compute Elo from win/draw/loss ratio");
+
+    let combined = all_stmts.join("\n\n");
+    let out_path = format!("{output}/chess_bridge.cypher");
+    fs::write(&out_path, &combined)?;
+
+    println!("\n  Generated {} total statements → {out_path}", all_stmts.len());
+    println!("  Bot name: {bot_name}");
+
+    Ok(())
 }
