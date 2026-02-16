@@ -1,0 +1,807 @@
+﻿
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.40">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Sarah Ciston">
+<meta name="keywords" content="artificial intelligence, artistic research, automated decision making, autonomous weapons, critical AI, defense, generative AI, international security, machine learning, military, surveillance, technoimperialism, tech industry, warfare">
+
+<title>AI War Cloud</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="index_files/libs/clipboard/clipboard.min.js"></script>
+<script src="index_files/libs/quarto-html/quarto.js"></script>
+<script src="index_files/libs/quarto-html/popper.min.js"></script>
+<script src="index_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="index_files/libs/quarto-html/anchor.min.js"></script>
+<link href="index_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="index_files/libs/quarto-html/quarto-syntax-highlighting-17030e90bab42484223df7d71a08a9a8.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="index_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="index_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="index_files/libs/bootstrap/bootstrap-20b26f62c48be7d595286536594245e6.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+<link rel="stylesheet" href="src/style.css">
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content page-columns page-full" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">AI War Cloud</h1>
+<p class="subtitle lead">AI decision making from battlefield to desktop</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Sarah Ciston, PhD <a href="mailto:sarah@sarahciston.com" class="quarto-title-author-email"><i class="bi bi-envelope"></i></a> <a href="https://orcid.org/0000-0001-9456-9537" class="quarto-title-author-orcid"> <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo1N0NEMjA4MDI1MjA2ODExOTk0QzkzNTEzRjZEQTg1NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDozM0NDOEJGNEZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDozM0NDOEJGM0ZGNTcxMUUxODdBOEVCODg2RjdCQ0QwOSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkZDN0YxMTc0MDcyMDY4MTE5NUZFRDc5MUM2MUUwNEREIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjU3Q0QyMDgwMjUyMDY4MTE5OTRDOTM1MTNGNkRBODU3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+84NovQAAAR1JREFUeNpiZEADy85ZJgCpeCB2QJM6AMQLo4yOL0AWZETSqACk1gOxAQN+cAGIA4EGPQBxmJA0nwdpjjQ8xqArmczw5tMHXAaALDgP1QMxAGqzAAPxQACqh4ER6uf5MBlkm0X4EGayMfMw/Pr7Bd2gRBZogMFBrv01hisv5jLsv9nLAPIOMnjy8RDDyYctyAbFM2EJbRQw+aAWw/LzVgx7b+cwCHKqMhjJFCBLOzAR6+lXX84xnHjYyqAo5IUizkRCwIENQQckGSDGY4TVgAPEaraQr2a4/24bSuoExcJCfAEJihXkWDj3ZAKy9EJGaEo8T0QSxkjSwORsCAuDQCD+QILmD1A9kECEZgxDaEZhICIzGcIyEyOl2RkgwAAhkmC+eAm0TAAAAABJRU5ErkJggg=="></a></p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+<div>
+  <div class="keywords">
+    <div class="block-title">Keywords</div>
+    <p>artificial intelligence, artistic research, automated decision making, autonomous weapons, critical AI, defense, generative AI, international security, machine learning, military, surveillance, technoimperialism, tech industry, warfare</p>
+  </div>
+</div>
+
+</header>
+
+
+<p><strong>AI War Cloud is an interactive database and tangible interactive installation connecting and explaining the current techno-imperial boomerang that is perpetuated by machine learning.</strong></p>
+<div id="cell-fig-graph" class="cell column-page" data-execution_count="1">
+<div id="fig-graph" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center anchored no-overflow-x" data-execution_count="1">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-graph-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+
+  <style>
+    /* Main divisions */
+    #i3OD9luevsU3NQZy4-main-div {
+      line-height: normal;
+      box-sizing: content-box;
+      padding: 3px;
+      background-color: white;
+    }
+    #i3OD9luevsU3NQZy4-left-div {
+      float: left;
+      line-height: normal;
+      box-sizing: content-box;
+    }
+    #i3OD9luevsU3NQZy4-right-div {
+      float: left;
+      height: 100%;
+      display: none;
+      line-height: normal;
+      box-sizing: content-box;
+    }
+    #i3OD9luevsU3NQZy4-right-inner-div {
+      padding-left: 5px;
+      padding-right: 2px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      height: 100%;
+      line-height: normal;
+      box-sizing: content-box;
+    }
+
+    /* Graph and details (contained in left-inner-div) */
+    #i3OD9luevsU3NQZy4-graph-div {
+      overflow: hidden;
+      resize: vertical;
+      position: relative;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.2);
+      display: none;
+      line-height: normal;
+      box-sizing: content-box;
+    }
+    #i3OD9luevsU3NQZy4-details-div {
+      overflow: auto;
+      resize: vertical;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.2);
+      display: none;
+      line-height: normal;
+      box-sizing: content-box;
+    }
+    #i3OD9luevsU3NQZy4-details-head {
+      user-select: none;
+      padding-left: 4px !important;
+      padding-top: 4px !important;
+      font-size: 8px;
+      font-family: "Lucida Console", Monaco, monospace;
+      color: gray;
+      line-height: normal;
+      box-sizing: content-box;
+    }
+    #i3OD9luevsU3NQZy4-details-body {
+      padding: 10px;
+      padding-top: 6px;
+      font-size: 10px;
+      font-family: "Lucida Console", Monaco, monospace;
+      line-height: normal;
+      box-sizing: content-box;
+    }
+
+    /* Control menu (contained in right-inner-div) */
+    .i3OD9luevsU3NQZy4-menu-item-head {
+      font-size: 11px;
+      font-family: "Lucida Console", Monaco, monospace;
+      color: black;
+      cursor: pointer;
+      padding-left: 5px;
+      padding-right: 0px;
+      padding-top: 5px;
+      padding-bottom: 5px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-shadow: 0px 0px 3px rgba(0, 0, 0, 0.2);
+      line-height: normal;
+      box-sizing: content-box;
+    }
+    .i3OD9luevsU3NQZy4-menu-item-body {
+      margin-left: 5px;
+      margin-bottom: 10px;
+      line-height: normal;
+      box-sizing: content-box;
+    }
+    .i3OD9luevsU3NQZy4-menu-subitem-head {
+      font-size: 9px;
+      font-family: "Lucida Console", Monaco, monospace;
+      font-weight: 600;
+      color: #006429;
+      cursor: default;
+      margin-bottom: 2px;
+      line-height: normal;
+      box-sizing: content-box;
+    }
+    .i3OD9luevsU3NQZy4-menu-subitem-body {
+      font-size: 8px;
+      font-family: "Lucida Console", Monaco, monospace;
+      margin-left: 7px;
+      margin-bottom: 5px;
+      line-height: normal;
+      box-sizing: content-box;
+    }
+    .i3OD9luevsU3NQZy4-labeled-input {
+      all: initial;
+      display: flex;
+      align-items: center;
+      margin-top: 1px;
+      margin-bottom: 1px;
+    }
+    .i3OD9luevsU3NQZy4-label {
+      all: initial;
+      font-size: 8px;
+      font-family: "Lucida Console", Monaco, monospace;
+      font-style: italic;
+      cursor: pointer;
+    }
+    .i3OD9luevsU3NQZy4-slider {
+      width: 100%;
+      margin-bottom: 2px;
+    }
+    .i3OD9luevsU3NQZy4-slider::-moz-focus-outer {
+      border: 0;
+    }
+    .i3OD9luevsU3NQZy4-slider-text-left {
+      font-size: 8px;
+      font-family: "Lucida Console", Monaco, monospace;
+      font-style: italic;
+      color: black;
+      float: left;
+      margin-top: 2px;
+    }
+    .i3OD9luevsU3NQZy4-slider-text-right {
+      font-size: 8px;
+      font-family: "Lucida Console", Monaco, monospace;
+      color: black;
+      float: right;
+    }
+    .i3OD9luevsU3NQZy4-checkbox {
+      margin-left: 0px !important;
+      margin-right: 4px !important;
+      margin-top: 2px !important;
+      margin-bottom: 2px !important;
+      padding: 0px !important;
+    }
+    .i3OD9luevsU3NQZy4-select {
+      cursor: pointer;
+      outline: none;
+      font-size: 8px;
+      font-family: "Lucida Console", Monaco, monospace;
+      color: black;
+      background-color: #f5f5f5;
+      width: 100%;
+      padding-top: 4px !important;
+      padding-bottom: 4px !important;
+      padding-left: 5px;
+      padding-right: 10px;
+      margin-right: 5px;
+      margin-top: 2px;
+      margin-bottom: 2px;
+      border-radius: 4px;
+      border: 1.2px solid #bbb;
+      box-shadow: 0 1px 0 1px rgba(0, 0, 0, 0.04);
+
+      -moz-appearance: none;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOTIuNCIgaGVpZ2h0PSIyOTIuNCI+PHBhdGggZmlsbD0iIzAwMDAwMCIgZD0iTSAtNS4yMDY0NjJlLTYsNjQuNTcyNjU2IDI5Mi4zOTk5OSw2NC41NzI2NTQgMTQ2LjE5OTk3LDIzMy42Mjg0NyAtNS4yMDY0NjJlLTYsNjQuNTcyNjU2Ii8+PC9zdmc+Cg==');
+      background-repeat: no-repeat;
+      background-position: right 4px top 50%;
+      background-size: 6px;
+    }
+    @-moz-document url-prefix() {
+      /* Dirty hack to remove dotted border on focus */
+      .i3OD9luevsU3NQZy4-select {
+        color: transparent !important;
+        text-shadow: 0 0 0 black !important;
+      }
+    }
+    .i3OD9luevsU3NQZy4-select:after {
+      cursor: pointer;
+    }
+    .i3OD9luevsU3NQZy4-button {
+      cursor: pointer;
+      outline: none;
+      font-size: 8px;
+      font-family: "Lucida Console", Monaco, monospace;
+      color: black;
+      background-color: #f2f2f2;
+      padding-top: 4px !important;
+      padding-bottom: 4px !important;
+      padding-left: 10px;
+      padding-right: 10px;
+      margin-top: 2px;
+      margin-bottom: 2px;
+      border-radius: 4px;
+      border: 1.2px solid #bbb;
+      box-shadow: 0 1px 0 1px rgba(0, 0, 0, 0.04);
+    }
+    .i3OD9luevsU3NQZy4-button:hover {
+      border: 1.2px solid #999;
+      background-color: #f2f2f2;
+    }
+    .i3OD9luevsU3NQZy4-button:active {
+      background-color: #ddd;
+    }
+    .i3OD9luevsU3NQZy4-button::-moz-focus-inner {
+      border: 0;
+    }
+    /* Hidden menu items */
+    #i3OD9luevsU3NQZy4-graph-select-div {
+      display: none;
+    }
+    #i3OD9luevsU3NQZy4-node-size-norm-div {
+      display: none;
+    }
+    #i3OD9luevsU3NQZy4-edge-size-norm-div {
+      display: none;
+    }
+
+    /* Graph */
+    #i3OD9luevsU3NQZy4-tooltip-div {
+      font-size: 10px;
+      font-family: "Lucida Console", Monaco, monospace;
+      z-index: 42001;
+      opacity: 0;
+      visibility: hidden;
+      position: absolute !important;
+      max-width: 40%;
+      padding: 5px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: black;
+      background-color: white;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.2);
+      line-height: normal;
+      box-sizing: content-box;
+    }
+    #i3OD9luevsU3NQZy4-menu-toggle-button, #i3OD9luevsU3NQZy4-details-toggle-button, #i3OD9luevsU3NQZy4-progress-container {
+      font-size: 14px;
+      font-family: "Lucida Console", Monaco, monospace;
+      z-index: 42000;
+      cursor: pointer;
+      position: absolute;
+      background-color: white;
+      border-radius: 4px;
+      box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.2);
+      line-height: normal;
+      box-sizing: content-box;
+    }
+    #i3OD9luevsU3NQZy4-menu-toggle-button {
+      top: 0;
+      right: 0;
+      padding-left: 6px;
+      padding-right: 6px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      border-top: 0px;
+      border-right: 0px;
+      border-bottom: 1px solid #ccc;
+      border-left: 1px solid #ccc;
+    }
+    #i3OD9luevsU3NQZy4-details-toggle-button {
+      bottom: 0;
+      left: 0;
+      padding-left: 19px;
+      padding-right: 19px;
+      padding-top: 0.5px;
+      padding-bottom: 2px;
+      border-top: 1px solid #ccc;
+      border-right: 1px solid #ccc;
+      border-bottom: 0px;
+      border-left: 0px;
+    }
+    #i3OD9luevsU3NQZy4-progress-container {
+      font-size: 10px;
+      text-align: center;
+      top: 46%;
+      left: 15%;
+      width: 70%;
+      padding: 8px;
+      border: none;
+      box-shadow: none;
+    }
+
+    /* Details */
+    #i3OD9luevsU3NQZy4-details-user-provided {
+      margin-top: 3px;
+      padding-top: 3.5px;
+      border-top: 0.5px dashed black;
+      line-height: normal;
+      box-sizing: content-box;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    #i3OD9luevsU3NQZy4-details-user-provided ul {
+      list-style-position: inside;
+      padding-left: 6px;
+    }
+  </style>
+
+  <div id="i3OD9luevsU3NQZy4-main-div">
+    <div id="i3OD9luevsU3NQZy4-tooltip-div"></div>
+
+    <div id="i3OD9luevsU3NQZy4-left-div">
+      <div id="i3OD9luevsU3NQZy4-left-inner-div">
+        <div id="i3OD9luevsU3NQZy4-graph-div"></div>
+        <div id="i3OD9luevsU3NQZy4-details-div">
+          <div id="i3OD9luevsU3NQZy4-details-head">
+            Details for selected element
+          </div>
+          <div id="i3OD9luevsU3NQZy4-details-body">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="i3OD9luevsU3NQZy4-right-div">
+      <div id="i3OD9luevsU3NQZy4-right-inner-div">
+        <!-- Menu: General -->
+        <div class="i3OD9luevsU3NQZy4-menu-item-head" id="i3OD9luevsU3NQZy4-general-head">
+          General
+        </div>
+        <div class="i3OD9luevsU3NQZy4-menu-item-body" id="i3OD9luevsU3NQZy4-general-body">
+          <!-- Sub-menu: State -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              App state
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <button class="i3OD9luevsU3NQZy4-button" id="i3OD9luevsU3NQZy4-reset" type="button">Reset</button>
+            </div>
+          </div>
+          <!-- Sub-menu: Display mode (fullscreen or not) -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Display mode
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <button class="i3OD9luevsU3NQZy4-button" id="i3OD9luevsU3NQZy4-fullscreen-button" type="button">Enter full screen</button>
+            </div>
+          </div>
+          <!-- Sub-menu: Export -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Export
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <button class="i3OD9luevsU3NQZy4-button" id="i3OD9luevsU3NQZy4-svg" type="button">SVG</button>
+              <button class="i3OD9luevsU3NQZy4-button" id="i3OD9luevsU3NQZy4-png" type="button">PNG</button>
+              <button class="i3OD9luevsU3NQZy4-button" id="i3OD9luevsU3NQZy4-jpg" type="button">JPG</button>
+            </div>
+          </div>
+        </div>
+        <!-- Menu: Data -->
+        <div class="i3OD9luevsU3NQZy4-menu-item-head" id="i3OD9luevsU3NQZy4-data-head">
+          Data selection
+        </div>
+        <div class="i3OD9luevsU3NQZy4-menu-item-body" id="i3OD9luevsU3NQZy4-data-body">
+          <!-- Sub-menu: Graph (only shown if multiple graphs in data) -->
+          <div id="i3OD9luevsU3NQZy4-graph-select-div">
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Graph
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <select class="i3OD9luevsU3NQZy4-select" id="i3OD9luevsU3NQZy4-graph-select"></select>
+            </div>
+          </div>
+          <!-- Sub-menu: Node label text -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Node label text
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <select class="i3OD9luevsU3NQZy4-select" id="i3OD9luevsU3NQZy4-node-label-data-source-select"></select>
+            </div>
+          </div>
+          <!-- Sub-menu: Edge label text -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Edge label text
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <select class="i3OD9luevsU3NQZy4-select" id="i3OD9luevsU3NQZy4-edge-label-data-source-select"></select>
+            </div>
+          </div>
+          <!-- Sub-menu: Node size -->
+          <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+            Node size
+          </div>
+          <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+            <div>
+              <select class="i3OD9luevsU3NQZy4-select" id="i3OD9luevsU3NQZy4-node-size-data-source-select"></select>
+            </div>
+            <div class="i3OD9luevsU3NQZy4-labeled-input">
+              <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-node-size-normalization-checkbox" type="checkbox">
+              <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-node-size-normalization-checkbox">Normalize</label>
+            </div>
+            <div id="i3OD9luevsU3NQZy4-node-size-norm-div">
+              <div>
+                <span class="i3OD9luevsU3NQZy4-slider-text-left">Minimum</span>
+                <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-node-size-normalization-min-text"></span>
+                <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-node-size-normalization-min-slider" type="range" min="0.01" max="300.0" step="0.01">
+              </div>
+              <div>
+                <span class="i3OD9luevsU3NQZy4-slider-text-left">Maximum</span>
+                <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-node-size-normalization-max-text"></span>
+                <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-node-size-normalization-max-slider" type="range" min="0.01" max="300.0" step="0.01">
+              </div>
+            </div>
+          </div>
+          <!-- Sub-menu: Edge size -->
+          <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+            Edge size
+          </div>
+          <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+            <div>
+              <select class="i3OD9luevsU3NQZy4-select" id="i3OD9luevsU3NQZy4-edge-size-data-source-select"></select>
+            </div>
+            <div class="i3OD9luevsU3NQZy4-labeled-input">
+              <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-edge-size-normalization-checkbox" type="checkbox">
+              <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-edge-size-normalization-checkbox">Normalize</label>
+            </div>
+            <div id="i3OD9luevsU3NQZy4-edge-size-norm-div">
+              <div>
+                <span class="i3OD9luevsU3NQZy4-slider-text-left">Minimum</span>
+                <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-edge-size-normalization-min-text"></span>
+                <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-edge-size-normalization-min-slider" type="range" min="0.01" max="50.0" step="0.01">
+              </div>
+              <div>
+                <span class="i3OD9luevsU3NQZy4-slider-text-left">Maximum</span>
+                <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-edge-size-normalization-max-text"></span>
+                <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-edge-size-normalization-max-slider" type="range" min="0.01" max="50.0" step="0.01">
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Menu: Nodes -->
+        <div class="i3OD9luevsU3NQZy4-menu-item-head" id="i3OD9luevsU3NQZy4-node-head">
+          Nodes
+        </div>
+        <div class="i3OD9luevsU3NQZy4-menu-item-body" id="i3OD9luevsU3NQZy4-node-body">
+          <!-- Sub-menu: Visibility -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Visibility
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-node-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-node-checkbox">Show nodes</label>
+              </div>
+            </div>
+          </div>
+          <!-- Sub-menu: Size -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Size
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <div>
+                <span class="i3OD9luevsU3NQZy4-slider-text-left">Scaling factor</span>
+                <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-node-size-factor-text"></span>
+                <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-node-size-factor-slider" type="range" min="0.01" max="5.0" step="0.01">
+              </div>
+            </div>
+          </div>
+          <!-- Sub-menu: Position -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Position
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <button class="i3OD9luevsU3NQZy4-button" id="i3OD9luevsU3NQZy4-node-release-button" type="button">Release fixed nodes</button>
+            </div>
+          </div>
+          <!-- Sub-menu: Drag behavior -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Drag behavior
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-node-drag-fix-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-node-drag-fix-checkbox">Fix node position</label>
+              </div>
+            </div>
+          </div>
+          <!-- Sub-menu: Hover behavior -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Hover behavior
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-node-hover-neighborhood-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-node-hover-neighborhood-checkbox">Show neighborhood</label>
+              </div>
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-node-hover-tooltip-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-node-hover-tooltip-checkbox">Show tooltips (if provided)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Menu: Node images -->
+        <div id="i3OD9luevsU3NQZy4-node-image-meta-control">
+          <div class="i3OD9luevsU3NQZy4-menu-item-head" id="i3OD9luevsU3NQZy4-node-image-head">
+            Node images
+          </div>
+          <div class="i3OD9luevsU3NQZy4-menu-item-body" id="i3OD9luevsU3NQZy4-node-image-body">
+            <!-- Sub-menu: Visibility -->
+            <div>
+              <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+                Visibility
+              </div>
+              <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+                <div class="i3OD9luevsU3NQZy4-labeled-input">
+                  <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-node-image-checkbox" type="checkbox">
+                  <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-node-image-checkbox">Show node images</label>
+                </div>
+              </div>
+            </div>
+            <!-- Sub-menu: Size -->
+            <div>
+              <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+                Size
+              </div>
+              <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+                <span class="i3OD9luevsU3NQZy4-slider-text-left">Scaling factor</span>
+                <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-node-image-size-factor-text"></span>
+                <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-node-image-size-factor-slider" type="range" min="0.01" max="5.0" step="0.01">
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Menu: Node labels -->
+        <div class="i3OD9luevsU3NQZy4-menu-item-head" id="i3OD9luevsU3NQZy4-node-label-head">
+          Node labels
+        </div>
+        <div class="i3OD9luevsU3NQZy4-menu-item-body" id="i3OD9luevsU3NQZy4-node-label-body">
+          <!-- Sub-menu: Visibility -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Visibility
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-node-label-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-node-label-checkbox">Show node labels</label>
+              </div>
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-node-label-border-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-node-label-border-checkbox">Show borders</label>
+              </div>
+            </div>
+          </div>
+          <!-- Sub-menu: Size -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Size
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <span class="i3OD9luevsU3NQZy4-slider-text-left">Scaling factor</span>
+              <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-node-label-size-factor-text"></span>
+              <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-node-label-size-factor-slider" type="range" min="0.01" max="5.0" step="0.01">
+            </div>
+          </div>
+          <!-- Sub-menu: Rotation -->
+          <div id="i3OD9luevsU3NQZy4-node-label-rotation">
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Rotation
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <span class="i3OD9luevsU3NQZy4-slider-text-left">Angle</span>
+              <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-node-label-rotation-text"></span>
+              <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-node-label-rotation-slider" type="range" min="0.0" max="359.0" step="1.0">
+            </div>
+          </div>
+        </div>
+        <!-- Menu: Edges -->
+        <div class="i3OD9luevsU3NQZy4-menu-item-head" id="i3OD9luevsU3NQZy4-edge-head">
+          Edges
+        </div>
+        <div class="i3OD9luevsU3NQZy4-menu-item-body" id="i3OD9luevsU3NQZy4-edge-body">
+          <!-- Sub-menu: Visibility -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Visibility
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-edge-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-edge-checkbox">Show edges</label>
+              </div>
+            </div>
+          </div>
+          <!-- Sub-menu: Size -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Size
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <span class="i3OD9luevsU3NQZy4-slider-text-left">Scaling factor</span>
+              <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-edge-size-factor-text"></span>
+              <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-edge-size-factor-slider" type="range" min="0.01" max="5.0" step="0.01">
+            </div>
+          </div>
+          <!-- Sub-menu: Form -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Form
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <span class="i3OD9luevsU3NQZy4-slider-text-left">Curvature</span>
+              <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-edge-curvature-text"></span>
+              <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-edge-curvature-slider" type="range" min="-1.2" max="1.2" step="0.02">
+            </div>
+          </div>
+          <!-- Sub-menu: Hover behavior -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Hover behavior
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-edge-hover-tooltip-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-edge-hover-tooltip-checkbox">Show tooltips (if provided)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Menu: Edge labels -->
+        <div class="i3OD9luevsU3NQZy4-menu-item-head" id="i3OD9luevsU3NQZy4-edge-label-head">
+          Edge labels
+        </div>
+        <div class="i3OD9luevsU3NQZy4-menu-item-body" id="i3OD9luevsU3NQZy4-edge-label-body">
+          <!-- Sub-menu: Visibility -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Visibility
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-edge-label-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-edge-label-checkbox">Show edge labels</label>
+              </div>
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-edge-label-border-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-edge-label-border-checkbox">Show borders</label>
+              </div>
+            </div>
+          </div>
+          <!-- Sub-menu: Size -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Size
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <span class="i3OD9luevsU3NQZy4-slider-text-left">Scaling factor</span>
+              <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-edge-label-size-factor-text"></span>
+              <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-edge-label-size-factor-slider" type="range" min="0.01" max="5.0" step="0.01">
+            </div>
+          </div>
+          <!-- Sub-menu: Rotation -->
+          <div id="i3OD9luevsU3NQZy4-edge-label-rotation">
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Rotation
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <span class="i3OD9luevsU3NQZy4-slider-text-left">Angle</span>
+              <span class="i3OD9luevsU3NQZy4-slider-text-right" id="i3OD9luevsU3NQZy4-edge-label-rotation-text"></span>
+              <input class="i3OD9luevsU3NQZy4-slider" id="i3OD9luevsU3NQZy4-edge-label-rotation-slider" type="range" min="0.0" max="359.0" step="1.0">
+            </div>
+          </div>
+        </div>
+        <!-- Menu: Layout algorithm -->
+        <div class="i3OD9luevsU3NQZy4-menu-item-head" id="i3OD9luevsU3NQZy4-layout-algorithm-head">
+          Layout algorithm
+        </div>
+        <div class="i3OD9luevsU3NQZy4-menu-item-body" id="i3OD9luevsU3NQZy4-layout-algorithm-body">
+
+          <!-- Sub-menu: Simulation -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Simulation
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-simulation-active-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-simulation-active-checkbox">Active</label>
+              </div>
+            </div>
+          </div>
+          <!-- Sub-menu: Many-body force -->
+          <div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-head">
+              Many-body force
+            </div>
+            <div class="i3OD9luevsU3NQZy4-menu-subitem-body">
+              <div class="i3OD9luevsU3NQZy4-labeled-input">
+                <input class="i3OD9luevsU3NQZy4-checkbox" id="i3OD9luevsU3NQZy4-many-body-force-checkbox" type="checkbox">
+                <label class="i3OD9luevsU3NQZy4-label" for="i3OD9luevsU3NQZy4-many-body-force-checkbox">On</label>
+              </div>
+              <div id="i3OD9luevsU3NQZy4-many-body-force-div">

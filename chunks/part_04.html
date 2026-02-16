@@ -1,0 +1,807 @@
+                xBezier2 = d.source.x + dx;
+                yBezier1 = d.source.y - dy;
+                yBezier2 = yBezier1;
+              } else{
+                xBezier1 = d.source.x + dx;
+                xBezier2 = d.source.x - dx;
+                yBezier1 = d.source.y - dy;
+                yBezier2 = yBezier1;
+              }
+              const uv1 = ui.composites.graph.calcUnitVector(d.source.x, d.source.y, xBezier1, yBezier1),
+                uv2 = ui.composites.graph.calcUnitVector(xBezier2, yBezier2, d.target.x, d.target.y);
+              if(d.source.shape == "rectangle"){
+                sourceSizeHalf = ui.composites.graph.adaptLenForRectShape(sourceSizeHalf, uv1);
+              }
+              if(d.target.shape == "rectangle"){
+                targetSizeHalf = ui.composites.graph.adaptLenForRectShape(targetSizeHalf, uv2);
+              }
+              const arrowSpacer = arrowSize,
+                sourceSpacer = sourceSizeHalf + d.source.border_size_half,
+                targetSpacer = targetSizeHalf + d.target.border_size_half + arrowSpacer,
+                xStart = d.source.x + (uv1.dx * sourceSpacer),
+                yStart = d.source.y + (uv1.dy * sourceSpacer),
+                xEnd = d.target.x - (uv2.dx * targetSpacer),
+                yEnd = d.target.y - (uv2.dy * targetSpacer);
+              d.xLabelPoint = d.source.x;
+              d.yLabelPoint = d.source.y - dy * 0.8;
+              const path = "M " + xStart + " " + yStart + " C " + xBezier1 + " " + yBezier1 + ", " + xBezier2 + " " + yBezier2 + ", " + xEnd + " " + yEnd;
+              return path;
+            },
+
+            updateEdgePositions(){
+              const arrowSize = state.shownData.general.arrow_size;
+              state.currentGraphParts.edgePaths
+                .attr("d", function(d){
+                  let path;
+                  if(d.source === d.target){
+                    // Case 1: Self edge (drawn curved)
+                    path = ui.composites.graph._calcSelfEdgePosition(d);
+                  } else{
+                    // Case 2: Normal edge (drawn straight or curved)
+                    if(state.edgeCurvature === 0.0){
+                      path = ui.composites.graph._calcStraightEdgePosition(d);
+                    } else {
+                      path = ui.composites.graph._calcCurvedEdgePosition(d);
+                    }
+                  }
+                  return path;
+                })
+            },
+
+            calcUnitVector(x1, y1, x2, y2){
+              const dx = x2 - x1,
+                dy = y2 - y1,
+                len = Math.sqrt(dx**2 + dy**2);
+              return {dx: dx/len, dy: dy/len, len: len};
+            },
+
+            adaptLenForRectShape(spacer, vec){
+              return spacer / Math.max(Math.abs(vec.dx), Math.abs(vec.dy));
+            },
+
+            // Edge labels
+            createEdgeLabels(){
+              const edgeLabelGroups = state.currentGraphParts.edgeLabelGroups,
+                data = state.shownData;
+              // 1) Remove existing elements
+              ui.composites.graph.removeEdgeLabels();
+              // 2) Create new elements
+              function verticalEdgePosFunc(dIndex){
+                const edgeLabelSize = data.edges[dIndex].label_size;
+                return edgeLabelSize / 2.6;
+              }
+              // - Edge label backgrounds
+              if(state.showEdgeLabelBorders){
+                state.currentGraphParts.edgeLabelBackground = edgeLabelGroups.append("text")
+                  .attr("text-anchor", "middle")
+                  .attr("dy", verticalEdgePosFunc)
+                  .attr("font-size", dIndex => data.edges[dIndex].label_size)
+                  .style("pointer-events", "none")
+                  .style("stroke", state.shownData.general.background_color)
+                  .style("stroke-width", 1.4)
+                  .text(dIndex => data.edges[dIndex].label);
+                if(state.edgeLabelFont !== null){
+                  state.currentGraphParts.edgeLabelBackground
+                    .attr("font-family", state.edgeLabelFont);
+                }
+              }
+              // - Edge label texts
+              state.currentGraphParts.edgeLabel = edgeLabelGroups.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", verticalEdgePosFunc)
+                .attr("font-size", dIndex => data.edges[dIndex].label_size)
+                .style("pointer-events", "none")
+                .style("fill", dIndex => data.edges[dIndex].label_color)
+                .text(dIndex => data.edges[dIndex].label);
+              if(state.edgeLabelFont !== null){
+                state.currentGraphParts.edgeLabel
+                  .attr("font-family", state.edgeLabelFont);
+              }
+              // 3) Position new elements
+              ui.composites.graph.updateEdgeLabelPositions();
+            },
+
+            removeEdgeLabels(){
+              state.currentGraphParts.edgeLabelGroups.selectAll("*").remove();
+            },
+
+            updateEdgeLabelPositions(){
+              // Translation (via fast SVG text position)
+              if(state.showEdgeLabelBorders){
+                state.currentGraphParts.edgeLabelBackground
+                  .attr("x", function(dIndex){
+                    return state.shownData.edges[dIndex].xLabelPoint;
+                  })
+                  .attr("y", function(dIndex){
+                    return state.shownData.edges[dIndex].yLabelPoint;
+                  });
+              }
+              state.currentGraphParts.edgeLabel
+                .attr("x", function(dIndex){
+                  return state.shownData.edges[dIndex].xLabelPoint;
+                })
+                .attr("y", function(dIndex){
+                  return state.shownData.edges[dIndex].yLabelPoint;
+                });
+              // Rotation (via slow SVG transform)
+              if(state.edgeLabelRotation !== 0.0){
+                function rotate(dIndex){
+                  const angle = -state.edgeLabelRotation,
+                    edge = state.shownData.edges[dIndex];
+                  return "rotate(" + angle + "," + edge.xLabelPoint + "," + edge.yLabelPoint + ")";
+                }
+                if(state.showEdgeLabelBorders){
+                  state.currentGraphParts.edgeLabelBackground
+                    .attr("transform", rotate);
+                }
+                state.currentGraphParts.edgeLabel
+                  .attr("transform", rotate);
+              }
+            },
+
+            // Layout algorithm
+            simulationManager:{
+              simulation: null,
+              initialize() {
+                this.simulation = d3.forceSimulation(state.shownData.nodes);
+              },
+              move(){
+                if(state.layoutAlgorithmActive){
+                  this.simulation.alpha(1.0);
+                  this.simulation.restart();
+                }
+              },
+              stop(){
+                this.simulation.stop();
+              },
+              releaseFixedNodes(){
+                state.currentGraphParts.nodeGroups
+                  .each(function(node){
+                    node.fx = null;
+                    node.fy = null;
+                  });
+              },
+              setAllForces(){
+                this.setCenteringForce();
+                this.setCollisionForce();
+                this.setLinksForce();
+                this.setManyBodyForce();
+                this.setXPositioningForce();
+                this.setYPositioningForce();
+              },
+              setCenteringForce(){
+                let centeringForce = null;
+                if(state.useCenteringForce){
+                  centeringForce = d3.forceCenter()
+                    .x(0.0)
+                    .y(0.0);
+                }
+                this.simulation.force("centering", centeringForce);
+              },
+              setCollisionForce(){
+                let collisionForce = null;
+                if(state.useCollisionForce){
+                  collisionForce = d3.forceCollide()
+                    .radius(state.collisionForceRadius)
+                    .strength(state.collisionForceStrength);
+                }
+                this.simulation.force("collision", collisionForce);
+              },
+              setLinksForce(){
+                let linksForce = null;
+                if(state.useLinksForce){
+                  const nodes = state.shownData.nodes,
+                    edges = state.shownData.edges;
+                  if(!state.shownData.edgeCounts){
+                    const count = {};
+                    for(let i=0; i<edges.length; i++){
+                      const edge = edges[i];
+                      count[edge.source.id] = (count[edge.source.id] || 0) + 1;
+                      count[edge.target.id] = (count[edge.target.id] || 0) + 1;
+                    }
+                    state.shownData.edgeCounts = count;
+                  }
+                  linksForce = d3.forceLink(state.shownData.edges)
+                    .distance(state.linksForceDistance)
+                    .strength(function(d) {
+                      // Adapted from https://github.com/d3/d3-force/blob/master/src/link.js
+                      const fixedConnectivity = Math.min(
+                        state.shownData.edgeCounts[d.source.id],
+                        state.shownData.edgeCounts[d.target.id]
+                      );
+                      const adjustableStrength = 2.0 * state.linksForceStrength;
+                      return adjustableStrength / fixedConnectivity;
+                    });
+                }
+                this.simulation.force("links", linksForce);
+              },
+              setManyBodyForce(){
+                let manyBodyForce = null;
+                if(state.useManyBodyForce){
+                  manyBodyForce = d3.forceManyBody()
+                    .strength(state.manyBodyForceStrength)
+                    .theta(state.manyBodyForceTheta);
+                  if(state.useManyBodyForceMinDistance){
+                    manyBodyForce.distanceMin(state.manyBodyForceMinDistance);
+                  } else{
+                    manyBodyForce.distanceMin(0.0);
+                  }
+                  if(state.useManyBodyForceMaxDistance){
+                    manyBodyForce.distanceMax(state.manyBodyForceMaxDistance);
+                  } else{
+                    manyBodyForce.distanceMax(Infinity);
+                  }
+                }
+                this.simulation.force("many-body", manyBodyForce);
+              },
+              setXPositioningForce(){
+                let xPositioningForce = null;
+                if(state.useXPositioningForce){
+                  xPositioningForce = d3.forceX()
+                    .strength(state.xPositioningForceStrength)
+                    .x(0.0);
+                }
+                this.simulation.force("x-positioning", xPositioningForce);
+              },
+              setYPositioningForce(){
+                let yPositioningForce = null;
+                if(state.useYPositioningForce){
+                  yPositioningForce = d3.forceY()
+                    .strength(state.yPositioningForceStrength)
+                    .y(0.0);
+                }
+                this.simulation.force("y-positioning", yPositioningForce);
+              },
+            },
+          },
+        },
+
+        init(){
+          // Containers
+          ui.composites.responsiveContainer.init();
+          // Graph selection (only visible if multiple graphs in data)
+          if(state.rawData.length > 1){
+            ui.elements.graphSelectionContainer.style.display = ui.convert.boolToDisplayStyle(true);
+            const optionList = [],
+              valueList = [];
+            let label;
+            for(let i=0; i<state.rawData.length; i++){
+              const graph = state.rawData[i];
+              try{
+                label = String(graph.label);
+                if(label === "undefined" || label === ""){
+                  throw "Invalid label";
+                }
+              } catch(e){
+                label = "Unnamed graph";
+              }
+              const name = String(i+1) + ": " + label;
+              optionList.push(name);
+              valueList.push(String(i));
+            }
+            ui.composites.selection(ui.elements.graphSelection, optionList, valueList);
+          }
+          // General (menu item)
+          ui.composites.menu.setItem(ui.elements.generalHead, ui.elements.generalBody, true);
+          // Data selection (menu item)
+          ui.composites.menu.setItem(ui.elements.dataHead, ui.elements.dataBody, false);
+          // - Node size
+          ui.elements.nodeSizeNormalizationCheckbox.checked = state.useNodeSizeNormalization;
+          ui.elements.nodeSizeNormalizationContainer.style.display = ui.convert.boolToDisplayStyle(state.useNodeSizeNormalization);
+          ui.elements.nodeSizeNormalizationMinText.innerHTML = ui.convert.numberToText(state.nodeSizeNormalizationMin);
+          ui.elements.nodeSizeNormalizationMinSlider.value = state.nodeSizeNormalizationMin;
+          ui.elements.nodeSizeNormalizationMaxText.innerHTML = ui.convert.numberToText(state.nodeSizeNormalizationMax);
+          ui.elements.nodeSizeNormalizationMaxSlider.value = state.nodeSizeNormalizationMax;
+          // - Edge size
+          ui.elements.edgeSizeNormalizationCheckbox.checked = state.useEdgeSizeNormalization;
+          ui.elements.edgeSizeNormalizationContainer.style.display = ui.convert.boolToDisplayStyle(state.useEdgeSizeNormalization);
+          ui.elements.edgeSizeNormalizationMinText.innerHTML = ui.convert.numberToText(state.edgeSizeNormalizationMin);
+          ui.elements.edgeSizeNormalizationMinSlider.value = state.edgeSizeNormalizationMin;
+          ui.elements.edgeSizeNormalizationMaxText.innerHTML = ui.convert.numberToText(state.edgeSizeNormalizationMax);
+          ui.elements.edgeSizeNormalizationMaxSlider.value = state.edgeSizeNormalizationMax;
+          // Nodes
+          ui.composites.menu.setItem(ui.elements.nodeHead, ui.elements.nodeBody, false);
+          ui.elements.nodeCheckbox.checked = state.showNodes;
+          ui.elements.nodeSizeFactorText.innerHTML = ui.convert.numberToText(state.nodeSizeFactor);
+          ui.elements.nodeSizeFactorSlider.value = state.nodeSizeFactor;
+          ui.elements.nodeDragFixCheckbox.checked = state.nodeDragFix;
+          ui.elements.nodeHoverNeighborhoodCheckbox.checked = state.nodeHoverNeighborhood;
+          ui.elements.nodeHoverTooltipCheckbox.checked = state.nodeHoverTooltip;
+          // Node images
+          ui.composites.menu.setItem(ui.elements.nodeImageHead, ui.elements.nodeImageBody, false);
+          ui.elements.nodeImageMetaControl.style.display = false;
+          ui.elements.nodeImageCheckbox.checked = state.showNodeImages;
+          ui.elements.nodeImageSizeFactorText.innerHTML = ui.convert.numberToText(state.nodeImageSizeFactor);
+          ui.elements.nodeImageSizeFactorSlider.value = state.nodeImageSizeFactor;
+          // Node labels
+          ui.composites.menu.setItem(ui.elements.nodeLabelHead, ui.elements.nodeLabelBody, false);
+          ui.elements.nodeLabelCheckbox.checked = state.showNodeLabels;
+          ui.elements.nodeLabelBorderCheckbox.checked = state.showNodeLabelBorders;
+          ui.elements.nodeLabelSizeFactorText.innerHTML = ui.convert.numberToText(state.nodeLabelSizeFactor);
+          ui.elements.nodeLabelSizeFactorSlider.value = state.nodeLabelSizeFactor;
+          ui.elements.nodeLabelRotationText.innerHTML = ui.convert.numberToText(state.nodeLabelRotation);
+          ui.elements.nodeLabelRotationSlider.value = state.nodeLabelRotation;
+          // Edges
+          ui.composites.menu.setItem(ui.elements.edgeHead, ui.elements.edgeBody, false);
+          ui.elements.edgeCheckbox.checked = state.showEdges;
+          ui.elements.edgeSizeFactorText.innerHTML = ui.convert.numberToText(state.edgeSizeFactor);
+          ui.elements.edgeSizeFactorSlider.value = state.edgeSizeFactor;
+          ui.elements.edgeCurvatureText.innerHTML = ui.convert.numberToText(state.edgeCurvature);
+          ui.elements.edgeCurvatureSlider.value = state.edgeCurvature;
+          ui.elements.edgeHoverTooltipCheckbox.checked = state.edgeHoverTooltip;
+          // Edge labels
+          ui.composites.menu.setItem(ui.elements.edgeLabelHead, ui.elements.edgeLabelBody, false);
+          ui.elements.edgeLabelCheckbox.checked = state.showEdgeLabels;
+          ui.elements.edgeLabelBorderCheckbox.checked = state.showEdgeLabelBorders;
+          ui.elements.edgeLabelSizeFactorText.innerHTML = ui.convert.numberToText(state.edgeLabelSizeFactor);
+          ui.elements.edgeLabelSizeFactorSlider.value = state.edgeLabelSizeFactor;
+          ui.elements.edgeLabelRotationText.innerHTML = ui.convert.numberToText(state.edgeLabelRotation);
+          ui.elements.edgeLabelRotationSlider.value = state.edgeLabelRotation;
+          // Layout algorithm
+          ui.composites.menu.setItem(ui.elements.layoutAlgorithmHead, ui.elements.layoutAlgorithmBody, false);
+          ui.elements.simulationCheckbox.checked = state.layoutAlgorithmActive;
+          ui.elements.manyBodyForceCheckbox.checked = state.useManyBodyForce;
+          ui.elements.manyBodyForceContainer.style.opacity = ui.convert.boolToOpacity(state.useManyBodyForce);
+          ui.elements.manyBodyForceStrengthText.innerHTML = ui.convert.numberToText(state.manyBodyForceStrength);
+          ui.elements.manyBodyForceStrengthSlider.value = state.manyBodyForceStrength;
+          ui.elements.manyBodyForceThetaText.innerHTML = ui.convert.numberToText(state.manyBodyForceTheta);
+          ui.elements.manyBodyForceThetaSlider.value = state.manyBodyForceTheta;
+          ui.elements.manyBodyForceMinDistCheckbox.checked = state.useManyBodyForceMinDistance;
+          ui.elements.manyBodyForceMinDistContainer.style.opacity = ui.convert.boolToOpacity(state.useManyBodyForceMinDistance);
+          ui.elements.manyBodyForceMinDistText.innerHTML = ui.convert.numberToText(state.manyBodyForceMinDistance);
+          ui.elements.manyBodyForceMinDistSlider.value = state.manyBodyForceMinDistance;
+          ui.elements.manyBodyForceMaxDistCheckbox.checked = state.useManyBodyForceMaxDistance;
+          ui.elements.manyBodyForceMaxDistContainer.style.opacity = ui.convert.boolToOpacity(state.useManyBodyForceMaxDistance);
+          ui.elements.manyBodyForceMaxDistText.innerHTML = ui.convert.numberToText(state.manyBodyForceMaxDistance);
+          ui.elements.manyBodyForceMaxDistSlider.value = state.manyBodyForceMaxDistance;
+          ui.elements.linksForceCheckbox.checked = state.useLinksForce;
+          ui.elements.linksForceContainer.style.opacity = ui.convert.boolToOpacity(state.useLinksForce);
+          ui.elements.linksForceDistanceText.innerHTML = ui.convert.numberToText(state.linksForceDistance);
+          ui.elements.linksForceDistanceSlider.value = state.linksForceDistance;
+          ui.elements.linksForceStrengthText.innerHTML = ui.convert.numberToText(state.linksForceStrength);
+          ui.elements.linksForceStrengthSlider.value = state.linksForceStrength;
+          ui.elements.collisionForceCheckbox.checked = state.useCollisionForce;
+          ui.elements.collisionForceContainer.style.opacity = ui.convert.boolToOpacity(state.useCollisionForce);
+          ui.elements.collisionForceRadiusText.innerHTML = ui.convert.numberToText(state.collisionForceRadius);
+          ui.elements.collisionForceRadiusSlider.value = state.collisionForceRadius;
+          ui.elements.collisionForceStrengthText.innerHTML = ui.convert.numberToText(state.collisionForceStrength);
+          ui.elements.collisionForceStrengthSlider.value = state.collisionForceStrength;
+          ui.elements.xPositioningForceCheckbox.checked = state.useXPositioningForce;
+          ui.elements.xPositioningForceContainer.style.opacity = ui.convert.boolToOpacity(state.useXPositioningForce);
+          ui.elements.xPositioningForceStrengthText.innerHTML = ui.convert.numberToText(state.xPositioningForceStrength);
+          ui.elements.xPositioningForceStrengthSlider.value = state.xPositioningForceStrength;
+          ui.elements.yPositioningForceCheckbox.checked = state.useYPositioningForce;
+          ui.elements.yPositioningForceContainer.style.opacity = ui.convert.boolToOpacity(state.useYPositioningForce);
+          ui.elements.yPositioningForceStrengthText.innerHTML = ui.convert.numberToText(state.yPositioningForceStrength);
+          ui.elements.yPositioningForceStrengthSlider.value = state.yPositioningForceStrength;
+          ui.elements.centeringForceCheckbox.checked = state.useCenteringForce;
+
+          ui.initSelectionValues();
+        },
+
+        initSelectionValues(){
+          function setSelectionOptionsAndValue(element, options, value){
+            if(!options.includes(value)){
+              value = options[0];
+            }
+            ui.composites.selection(element, options);
+            element.value = value;
+          }
+          // Node label text data source
+          setSelectionOptionsAndValue(
+            ui.elements.nodeLabelTextDataSourceSelect,
+            state.parsedData.general.node_properties.node_label_text_data_sources,
+            state.nodeLabelTextDataSource,
+          );
+          // Edge label text data source
+          setSelectionOptionsAndValue(
+            ui.elements.edgeLabelTextDataSourceSelect,
+            state.parsedData.general.edge_properties.edge_label_text_data_sources,
+            state.edgeLabelTextDataSource,
+          );
+          // Node size data source
+          setSelectionOptionsAndValue(
+            ui.elements.nodeSizeDataSourceSelect,
+            state.parsedData.general.node_properties.node_size_data_sources,
+            state.nodeSizeDataSource,
+          );
+          // Edge size data source
+          setSelectionOptionsAndValue(
+            ui.elements.edgeSizeDataSourceSelect,
+            state.parsedData.general.edge_properties.edge_size_data_sources,
+            state.edgeSizeDataSource,
+          );
+        },
+
+        deleteChildElements(element){
+          while(element.firstChild){
+            element.removeChild(element.firstChild);
+          }
+        },
+
+        convert:{
+          numberToText(number, numDigits=2) {
+            return String(Number(number).toFixed(numDigits));
+          },
+
+          boolToDisplayStyle(isVisible){
+            if(isVisible){
+              return "block";
+            }
+            return "none";
+          },
+
+          boolToOpacity(isActive){
+            if(isActive){
+              return 1.0;
+            }
+            return 0.25;
+          },
+        },
+
+        setBehavior(){
+          // Window resize (includes ctrl+wheel zoom, landscape/portrait orientation on phones)
+          window.onresize = function(){
+            ui.composites.responsiveContainer.adaptToResize();
+            ui.composites.graph.updateGraphDrawingArea();
+          }
+          // Container resize
+          ui.elements.graphContainer.onmouseup = function(){
+            const currentHeight = parseInt(ui.elements.graphContainer.clientHeight);
+            if(currentHeight != state.graphContainerHeight){
+              ui.composites.responsiveContainer.adaptToResize();
+              ui.composites.graph.updateGraphDrawingArea();
+            }
+          };
+          ui.elements.detailsContainer.onmouseup = function(){
+            const currentHeight = parseInt(ui.elements.detailsContainer.clientHeight);
+            if(currentHeight != state.detailsContainerHeight){
+              ui.composites.responsiveContainer.adaptToResize();
+            }
+          };
+          // Tooltip
+          ui.elements.tooltipContainer.onmouseover = function(){
+            ui.composites.tooltip.show();
+          }
+          ui.elements.tooltipContainer.onmouseout = function(){
+            ui.composites.tooltip.hide();
+          }
+          // General menu
+          ui.elements.generalHead.onclick = function(){
+            ui.composites.menu.toggleItem(ui.elements.generalHead, ui.elements.generalBody);
+          };
+          ui.elements.resetButton.onclick = function(){
+            app.restart();
+          };
+          ui.elements.fullscreenButton.onclick = function(){
+            if(document.fullscreenElement){
+              document.exitFullscreen();
+            } else{
+              ui.elements.mainContainer.requestFullscreen()
+                .catch(function(err){
+                  alert("Error attempting to enable full-screen mode: " + err.message);
+                });
+            }
+          };
+          ui.elements.mainContainer.onfullscreenchange = function(){
+            if(document.fullscreenElement){
+              ui.elements.fullscreenButton.innerText = "Exit full screen";
+            } else{
+              ui.elements.fullscreenButton.innerText = "Enter full screen";
+            }
+            // Wait for browser to switch to fullscreen and resize divs, then adapt to new sizes
+            setTimeout(function(){
+              ui.composites.responsiveContainer.adaptToFullscreen();
+              ui.composites.graph.updateGraphDrawingArea();
+            }, 250);
+          };
+          ui.elements.svgExportButton.onclick = function(){
+            ui.composites.download.svg("graph.svg");
+          };
+          ui.elements.pngExportButton.onclick = function(){
+            ui.composites.download.png("graph.png");
+          };
+          ui.elements.jpgExportButton.onclick = function(){
+            ui.composites.download.jpg("graph.jpg");
+          };
+          // Data menu
+          ui.elements.dataHead.onclick = function(){
+            ui.composites.menu.toggleItem(ui.elements.dataHead, ui.elements.dataBody);
+          };
+          // - Graph selection
+          ui.elements.graphSelection.onchange = function(){
+            const chosenGraphIndex = parseInt(this.value);
+            state.manager.parseChosenData(chosenGraphIndex);
+            state.manager.prepareShownData();
+            ui.initSelectionValues();
+            ui.composites.graph.createGraph();
+          };
+          // - Node label text
+          ui.elements.nodeLabelTextDataSourceSelect.onchange = function(){
+            state.nodeLabelTextDataSource = this.value;
+            state.manager.updateNodeLabelTexts();
+          };
+          // - Edge label text
+          ui.elements.edgeLabelTextDataSourceSelect.onchange = function(){
+            state.edgeLabelTextDataSource = this.value;
+            state.manager.updateEdgeLabelTexts();
+          };
+          // - Node size
+          ui.elements.nodeSizeDataSourceSelect.onchange = function(){
+            state.nodeSizeDataSource = this.value;
+            state.manager.updateNodeSizes();
+          };
+          ui.elements.nodeSizeNormalizationCheckbox.onchange = function(){
+            state.useNodeSizeNormalization = this.checked;
+            ui.elements.nodeSizeNormalizationContainer.style.display = ui.convert.boolToDisplayStyle(state.useNodeSizeNormalization);
+            state.manager.updateNodeSizes();
+          };
+          ui.elements.nodeSizeNormalizationMinSlider.oninput = function(){
+            ui.elements.nodeSizeNormalizationMinText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.nodeSizeNormalizationMinSlider.onchange = function(){
+            state.nodeSizeNormalizationMin = parseFloat(this.value);
+            if(state.nodeSizeNormalizationMin > state.nodeSizeNormalizationMax){
+              state.nodeSizeNormalizationMax = state.nodeSizeNormalizationMin;
+              ui.elements.nodeSizeNormalizationMaxSlider.value = state.nodeSizeNormalizationMax;
+              ui.elements.nodeSizeNormalizationMaxText.innerHTML = ui.convert.numberToText(state.nodeSizeNormalizationMax);
+            }
+            state.manager.updateNodeSizes();
+          };
+          ui.elements.nodeSizeNormalizationMaxSlider.oninput = function(){
+            ui.elements.nodeSizeNormalizationMaxText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.nodeSizeNormalizationMaxSlider.onchange = function(){
+            state.nodeSizeNormalizationMax = parseFloat(this.value);
+            if(state.nodeSizeNormalizationMax < state.nodeSizeNormalizationMin){
+              state.nodeSizeNormalizationMin = state.nodeSizeNormalizationMax;
+              ui.elements.nodeSizeNormalizationMinSlider.value = state.nodeSizeNormalizationMin;
+              ui.elements.nodeSizeNormalizationMinText.innerHTML = ui.convert.numberToText(state.nodeSizeNormalizationMin);
+            }
+            state.manager.updateNodeSizes();
+          };
+          // - Edge size
+          ui.elements.edgeSizeDataSourceSelect.onchange = function(){
+            state.edgeSizeDataSource = this.value;
+            state.manager.updateEdgeSizes();
+          };
+          ui.elements.edgeSizeNormalizationCheckbox.onchange = function(){
+            state.useEdgeSizeNormalization = this.checked;
+            ui.elements.edgeSizeNormalizationContainer.style.display = ui.convert.boolToDisplayStyle(state.useEdgeSizeNormalization);
+            state.manager.updateEdgeSizes();
+          };
+          ui.elements.edgeSizeNormalizationMinSlider.oninput = function(){
+            ui.elements.edgeSizeNormalizationMinText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.edgeSizeNormalizationMinSlider.onchange = function(){
+            state.edgeSizeNormalizationMin = parseFloat(this.value);
+            if(state.edgeSizeNormalizationMin > state.edgeSizeNormalizationMax){
+              state.edgeSizeNormalizationMax = state.edgeSizeNormalizationMin;
+              ui.elements.edgeSizeNormalizationMaxSlider.value = state.edgeSizeNormalizationMax;
+              ui.elements.edgeSizeNormalizationMaxText.innerHTML = ui.convert.numberToText(state.edgeSizeNormalizationMax);
+            }
+            state.manager.updateEdgeSizes();
+          };
+          ui.elements.edgeSizeNormalizationMaxSlider.oninput = function(){
+            ui.elements.edgeSizeNormalizationMaxText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.edgeSizeNormalizationMaxSlider.onchange = function(){
+            state.edgeSizeNormalizationMax = parseFloat(this.value);
+            if(state.edgeSizeNormalizationMax < state.edgeSizeNormalizationMin){
+              state.edgeSizeNormalizationMin = state.edgeSizeNormalizationMax;
+              ui.elements.edgeSizeNormalizationMinSlider.value = state.edgeSizeNormalizationMin;
+              ui.elements.edgeSizeNormalizationMinText.innerHTML = ui.convert.numberToText(state.edgeSizeNormalizationMin);
+            }
+            state.manager.updateEdgeSizes();
+          };
+          // Nodes menu
+          ui.elements.nodeHead.onclick = function(){
+            ui.composites.menu.toggleItem(ui.elements.nodeHead, ui.elements.nodeBody);
+          };
+          ui.elements.nodeCheckbox.onchange = function(){
+            state.showNodes = this.checked;
+            ui.composites.graph.updateNodeVisibilities();
+          };
+          ui.elements.nodeSizeFactorSlider.oninput = function(){
+            ui.elements.nodeSizeFactorText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.nodeSizeFactorSlider.onchange = function(){
+            state.nodeSizeFactor = parseFloat(this.value);
+            state.manager.updateNodeSizes();
+          };
+          ui.elements.nodeDragFixCheckbox.onchange = function(){
+            state.nodeDragFix = this.checked;
+          };
+          ui.elements.nodeHoverNeighborhoodCheckbox.onchange = function(){
+            state.nodeHoverNeighborhood = this.checked;
+          };
+          ui.elements.nodeHoverTooltipCheckbox.onchange = function(){
+            state.nodeHoverTooltip = this.checked;
+          };
+          ui.elements.nodeReleaseButton.onclick = function(){
+            ui.composites.graph.simulationManager.releaseFixedNodes();
+            ui.composites.graph.simulationManager.move();
+          };
+          // Node images menu
+          ui.elements.nodeImageHead.onclick = function(){
+            ui.composites.menu.toggleItem(ui.elements.nodeImageHead, ui.elements.nodeImageBody);
+          };
+          ui.elements.nodeImageCheckbox.onchange = function(){
+            state.showNodeImages = this.checked;
+            state.currentGraphParts.nodeImageMainGroup.style("display", ui.convert.boolToDisplayStyle(state.showNodeImages));
+            ui.composites.graph.updateNodeImagePositions();
+          };
+          ui.elements.nodeImageSizeFactorSlider.oninput = function(){
+            ui.elements.nodeImageSizeFactorText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.nodeImageSizeFactorSlider.onchange = function(){
+            state.nodeImageSizeFactor = parseFloat(this.value);
+            state.manager.updateNodeImageSizes();
+          };
+          // Node labels menu
+          ui.elements.nodeLabelHead.onclick = function(){
+            ui.composites.menu.toggleItem(ui.elements.nodeLabelHead, ui.elements.nodeLabelBody);
+          };
+          ui.elements.nodeLabelCheckbox.onchange = function(){
+            state.showNodeLabels = this.checked;
+            state.currentGraphParts.nodeLabelMainGroup.style("display", ui.convert.boolToDisplayStyle(state.showNodeLabels));
+            ui.composites.graph.updateNodeLabelPositions();
+          };
+          ui.elements.nodeLabelBorderCheckbox.onchange = function(){
+            state.showNodeLabelBorders = this.checked;
+            ui.composites.graph.createNodeLabels();
+          };
+          ui.elements.nodeLabelSizeFactorSlider.oninput = function(){
+            ui.elements.nodeLabelSizeFactorText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.nodeLabelSizeFactorSlider.onchange = function(){
+            state.nodeLabelSizeFactor = parseFloat(this.value);
+            state.manager.updateNodeLabelSizes();
+          };
+          ui.elements.nodeLabelRotationSlider.oninput = function(){
+            ui.elements.nodeLabelRotationText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.nodeLabelRotationSlider.onchange = function(){
+            state.nodeLabelRotation = parseFloat(this.value);
+            state.manager.updateNodeLabelRotations();
+          };
+          // Edges menu
+          ui.elements.edgeHead.onclick = function(){
+            ui.composites.menu.toggleItem(ui.elements.edgeHead, ui.elements.edgeBody);
+          };
+          ui.elements.edgeCheckbox.onchange = function(){
+            state.showEdges = this.checked;
+            state.currentGraphParts.edgeMainGroup.style("display", ui.convert.boolToDisplayStyle(state.showEdges));
+            ui.composites.graph.updateEdgePositions();
+          };
+          ui.elements.edgeSizeFactorSlider.oninput = function(){
+            ui.elements.edgeSizeFactorText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.edgeSizeFactorSlider.onchange = function(){
+            state.edgeSizeFactor = parseFloat(this.value);
+            state.manager.updateEdgeSizes();
+          };
+          ui.elements.edgeCurvatureSlider.oninput = function(){
+            ui.elements.edgeCurvatureText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.edgeCurvatureSlider.onchange = function(){
+            state.edgeCurvature = parseFloat(this.value);
+            state.manager.updateEdgeCurvatures();
+          };
+          ui.elements.edgeHoverTooltipCheckbox.onchange = function(){
+            state.edgeHoverTooltip = this.checked;
+          };
+          // Edge labels menu
+          ui.elements.edgeLabelHead.onclick = function(){
+            ui.composites.menu.toggleItem(ui.elements.edgeLabelHead, ui.elements.edgeLabelBody);
+          };
+          ui.elements.edgeLabelCheckbox.onchange = function(){
+            state.showEdgeLabels = this.checked;
+            state.currentGraphParts.edgeLabelMainGroup.style("display", ui.convert.boolToDisplayStyle(state.showEdgeLabels));
+            ui.composites.graph.updateEdgeLabelPositions();
+          };
+          ui.elements.edgeLabelBorderCheckbox.onchange = function(){
+            state.showEdgeLabelBorders = this.checked;
+            ui.composites.graph.createEdgeLabels();
+          };
+          ui.elements.edgeLabelSizeFactorSlider.oninput = function(){
+            ui.elements.edgeLabelSizeFactorText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.edgeLabelSizeFactorSlider.onchange = function(){
+            state.edgeLabelSizeFactor = parseFloat(this.value);
+            state.manager.updateEdgeLabelSizes();
+          };
+          ui.elements.edgeLabelRotationSlider.oninput = function(){
+            ui.elements.edgeLabelRotationText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.edgeLabelRotationSlider.onchange = function(){
+            state.edgeLabelRotation = parseFloat(this.value);
+            state.manager.updateEdgeLabelRotations();
+          };
+          // Layout algorithm menu
+          ui.elements.layoutAlgorithmHead.onclick = function(){
+            ui.composites.menu.toggleItem(ui.elements.layoutAlgorithmHead, ui.elements.layoutAlgorithmBody);
+          };
+          ui.elements.simulationCheckbox.onchange = function(){
+            state.layoutAlgorithmActive = !state.layoutAlgorithmActive;
+            if(state.layoutAlgorithmActive){
+              ui.composites.graph.simulationManager.move();
+            } else {
+              ui.composites.graph.simulationManager.stop();
+            }
+          }
+          ui.elements.manyBodyForceCheckbox.onchange = function(){
+            state.useManyBodyForce = this.checked;
+            ui.elements.manyBodyForceContainer.style.opacity = ui.convert.boolToOpacity(state.useManyBodyForce);
+            ui.composites.graph.simulationManager.setManyBodyForce();
+            ui.composites.graph.simulationManager.move();
+          };
+          ui.elements.manyBodyForceStrengthSlider.oninput = function(){
+            ui.elements.manyBodyForceStrengthText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.manyBodyForceStrengthSlider.onchange = function(){
+            state.manyBodyForceStrength = parseFloat(this.value);
+            ui.composites.graph.simulationManager.setManyBodyForce();
+            if(state.useManyBodyForce){
+              ui.composites.graph.simulationManager.move();
+            }
+          };
+          ui.elements.manyBodyForceThetaSlider.oninput = function(){
+            ui.elements.manyBodyForceThetaText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.manyBodyForceThetaSlider.onchange = function(){
+            state.manyBodyForceTheta = parseFloat(this.value);
+            ui.composites.graph.simulationManager.setManyBodyForce();
+            if(state.useManyBodyForce){
+              ui.composites.graph.simulationManager.move();
+            }
+          };
+          ui.elements.manyBodyForceMinDistCheckbox.onchange = function(){
+            state.useManyBodyForceMinDistance = this.checked;
+            ui.composites.graph.simulationManager.setManyBodyForce();
+            ui.elements.manyBodyForceMinDistContainer.style.opacity = ui.convert.boolToOpacity(state.useManyBodyForceMinDistance);
+          }
+          ui.elements.manyBodyForceMinDistSlider.oninput = function(){
+            ui.elements.manyBodyForceMinDistText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.manyBodyForceMinDistSlider.onchange = function(){
+            state.manyBodyForceMinDistance = parseFloat(this.value);
+            if(state.manyBodyForceMinDistance > state.manyBodyForceMaxDistance){
+              state.manyBodyForceMaxDistance = state.manyBodyForceMinDistance;
+              ui.elements.manyBodyForceMaxDistText.innerHTML = ui.convert.numberToText(state.manyBodyForceMaxDistance);
+              ui.elements.manyBodyForceMaxDistSlider.value = state.manyBodyForceMaxDistance;
+            }
+            ui.composites.graph.simulationManager.setManyBodyForce();
+            if(state.useManyBodyForce){
+              ui.composites.graph.simulationManager.move();
+            }
+          };
+          ui.elements.manyBodyForceMaxDistCheckbox.onchange = function(){
+            state.useManyBodyForceMaxDistance = this.checked;
+            ui.composites.graph.simulationManager.setManyBodyForce();
+            ui.elements.manyBodyForceMaxDistContainer.style.opacity = ui.convert.boolToOpacity(state.useManyBodyForceMaxDistance);
+          }
+          ui.elements.manyBodyForceMaxDistSlider.oninput = function(){
+            ui.elements.manyBodyForceMaxDistText.innerHTML = ui.convert.numberToText(this.value);
+          };
+          ui.elements.manyBodyForceMaxDistSlider.onchange = function(){
+            state.manyBodyForceMaxDistance = parseFloat(this.value);
+            if(state.manyBodyForceMaxDistance < state.manyBodyForceMinDistance){
+              state.manyBodyForceMinDistance = state.manyBodyForceMaxDistance;
+              ui.elements.manyBodyForceMinDistText.innerHTML = ui.convert.numberToText(state.manyBodyForceMinDistance);
+              ui.elements.manyBodyForceMinDistSlider.value = state.manyBodyForceMinDistance;
+            }
+            ui.composites.graph.simulationManager.setManyBodyForce();
+            if(state.useManyBodyForce){
+              ui.composites.graph.simulationManager.move();
+            }
+          };
+          ui.elements.linksForceCheckbox.onchange = function(){
+            state.useLinksForce = this.checked;
+            ui.elements.linksForceContainer.style.opacity = ui.convert.boolToOpacity(state.useLinksForce);
+            ui.composites.graph.simulationManager.setLinksForce();
+            ui.composites.graph.simulationManager.move();
+          };
+          ui.elements.linksForceDistanceSlider.oninput = function(){
+            ui.elements.linksForceDistanceText.innerHTML = ui.convert.numberToText(this.value);
+          };

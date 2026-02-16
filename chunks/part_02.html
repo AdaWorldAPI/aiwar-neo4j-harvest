@@ -1,0 +1,807 @@
+                shownNode.image = parsedNode.image;
+              }
+              if(typeof(parsedNode.hover) !== "undefined"){
+                shownNode.hover = parsedNode.hover;
+              }
+              if(typeof(parsedNode.click) !== "undefined"){
+                shownNode.click = parsedNode.click;
+              }
+              if(typeof(parsedNode.fx) !== "undefined"){
+                shownNode.fx = parsedNode.fx;
+              }
+              if(typeof(parsedNode.fy) !== "undefined"){
+                shownNode.fy = parsedNode.fy;
+              }
+              nodeIdToObjectMap.set(shownNode.id, shownNode);
+              // Derived properties for performance improvement in updateNodePositions
+              state.manager.calcSingleNodeSizeDerivatives(shownNode);
+              state.manager.calcSingleNodeLabelSizeDerivatives(shownNode);
+              state.manager.calcSingleNodeBorderSizeDerivatives(shownNode);
+            }
+            // c) Edges
+            const edgeSizeNormalizer = state.manager.createEdgeSizeNormalizer(),
+              nodeToAdjacentNodesMap = state.manager.createNodeToAdjacentNodesMap(),
+              nodeToIncidentEdgesMap = state.manager.createNodeToIncidentEdgesMap();
+            for(let i=0; i<numEdges; i++){
+              state.shownData.edges[i] = {};
+              const parsedEdge = state.parsedData.edges[i],
+                shownEdge = state.shownData.edges[i];
+              shownEdge.source = nodeIdToObjectMap.get(parsedEdge.source.id);
+              shownEdge.target = nodeIdToObjectMap.get(parsedEdge.target.id);
+              shownEdge.id = parsedEdge.id;
+              shownEdge.label = state.manager.calcSingleEdgeLabelText(parsedEdge);
+              shownEdge.color = parsedEdge.color;
+              shownEdge.opacity = parsedEdge.opacity;
+              shownEdge.size = state.manager.calcSingleEdgeSize(parsedEdge, edgeSizeNormalizer);
+              shownEdge.label_color = parsedEdge.label_color;
+              shownEdge.label_size = state.manager.calcSingleEdgeLabelSize(parsedEdge);
+              shownEdge.multi_edge_counter = parsedEdge.multi_edge_counter;
+              if(typeof(parsedEdge.hover) !== "undefined"){
+                shownEdge.hover = parsedEdge.hover;
+              }
+              if(typeof(parsedEdge.click) !== "undefined"){
+                shownEdge.click = parsedEdge.click;
+              }
+              // Derived properties for performance improvement in updateEdgePositions
+              shownEdge.multi_edge_curvature_factor = state.manager.calcSingleEdgeCurvatureFactor(parsedEdge);
+              // Data structure for highlighting adjacent nodes and incident edges to this node
+              nodeToAdjacentNodesMap.add(shownEdge.source, shownEdge.target);
+              nodeToAdjacentNodesMap.add(shownEdge.target, shownEdge.source);
+              nodeToIncidentEdgesMap.add(shownEdge.source, shownEdge);
+              nodeToIncidentEdgesMap.add(shownEdge.target, shownEdge);
+            }
+            state.shownData.adjacency = nodeToAdjacentNodesMap;
+            state.shownData.incidence = nodeToIncidentEdgesMap;
+          },
+
+          calcSingleNodeSize(parsedNode, nodeSizeNormalizer){
+            let nodeSize = nodeSizeNormalizer(parsedNode[state.nodeSizeDataSource]);
+            if(!isFinite(nodeSize)){
+              nodeSize = state.parsedData.general.node_size;
+            }
+            return nodeSize * state.nodeSizeFactor;
+          },
+
+          calcSingleNodeLabelText(parsedNode){
+            return String(parsedNode[state.nodeLabelTextDataSource]);
+          },
+
+          calcSingleNodeLabelSize(parsedNode){
+            return parsedNode.label_size * state.nodeLabelSizeFactor;
+          },
+
+          calcSingleNodeLabelPlacement(node){
+            let baseSize = node.size_half;
+            if(state.showNodeImages && typeof(node.image) !== "undefined"){
+              baseSize = (node.size_half > node.image_size_half) ? node.size_half : node.image_size_half;
+            }
+            return baseSize + node.label_size * 0.77 + 2.0;
+          },
+
+          calcSingleEdgeSize(parsedEdge, edgeSizeNormalizer){
+            let edgeSize = edgeSizeNormalizer(parsedEdge[state.edgeSizeDataSource]);
+            if(!isFinite(edgeSize)){
+              edgeSize = state.parsedData.general.edge_size;
+            }
+            return edgeSize * state.edgeSizeFactor;
+          },
+
+          calcSingleEdgeCurvatureFactor(parsedEdge){
+            return state.edgeCurvature * parsedEdge.multi_edge_counter;
+          },
+
+          calcSingleEdgeLabelText(parsedEdge){
+            return String(parsedEdge[state.edgeLabelTextDataSource]);
+          },
+
+          calcSingleEdgeLabelSize(parsedEdge){
+            return parsedEdge.label_size * state.edgeLabelSizeFactor;
+          },
+
+          calcSingleNodeSizeDerivatives(shownNode){
+            // Note: Many values are calculated here once to improve the performance of node position updates
+            shownNode.size_half = shownNode.size / 2.0;
+            shownNode.size_for_hexagon_r = shownNode.size / 1.8;
+            shownNode.size_for_hexagon_rh = shownNode.size_for_hexagon_r / 2.0;
+            shownNode.size_for_hexagon_rs = shownNode.size_for_hexagon_r * 0.886;
+            shownNode.image_size = shownNode.size / 1.42 * state.nodeImageSizeFactor;
+            shownNode.image_size_half = shownNode.image_size / 2.0;
+            shownNode.relative_label_placement = state.manager.calcSingleNodeLabelPlacement(shownNode);
+          },
+
+          calcSingleNodeLabelSizeDerivatives(shownNode){
+            shownNode.relative_label_placement = state.manager.calcSingleNodeLabelPlacement(shownNode);
+          },
+
+          calcSingleNodeBorderSizeDerivatives(shownNode){
+            shownNode.border_size_half = shownNode.border_size / 2.0;
+          },
+
+          createNodeSizeNormalizer(){
+            let normalizer;
+            if(state.useNodeSizeNormalization){
+              const dataMin = state.parsedData.general.node_properties.minima[state.nodeSizeDataSource],
+                dataMax = state.parsedData.general.node_properties.maxima[state.nodeSizeDataSource],
+                targetMin = state.nodeSizeNormalizationMin,
+                targetMax = state.nodeSizeNormalizationMax,
+                dataDiff = dataMax - dataMin,
+                targetDiff = targetMax - targetMin;
+              let factor = targetDiff / dataDiff;
+              if(!isFinite(factor) || factor === null){
+                factor = 0.0;
+              }
+              normalizer = function(val){
+                return (val - dataMin) * factor + targetMin;
+              }
+            } else{
+              normalizer = function(val){
+                return val;
+              }
+            }
+            return normalizer;
+          },
+
+          createEdgeSizeNormalizer(){
+            let normalizer;
+            if(state.useEdgeSizeNormalization){
+              const dataMin = state.parsedData.general.edge_properties.minima[state.edgeSizeDataSource],
+                dataMax = state.parsedData.general.edge_properties.maxima[state.edgeSizeDataSource],
+                targetMin = state.edgeSizeNormalizationMin,
+                targetMax = state.edgeSizeNormalizationMax,
+                dataDiff = dataMax - dataMin,
+                targetDiff = targetMax - targetMin;
+              let factor = targetDiff / dataDiff;
+              if(!isFinite(factor)){
+                factor = 0.0;
+              }
+              normalizer = function(val){
+                return (val - dataMin) * factor + targetMin;
+              }
+            } else{
+              normalizer = function(val){
+                return val;
+              }
+            }
+            return normalizer;
+          },
+
+          updateNodeSizes(){
+            // Data
+            const nodeSizeNormalizer = state.manager.createNodeSizeNormalizer();
+            for(let i=0; i<state.parsedData.nodes.length; i++){
+              const parsedNode = state.parsedData.nodes[i],
+                shownNode = state.shownData.nodes[i];
+              shownNode.size = state.manager.calcSingleNodeSize(parsedNode, nodeSizeNormalizer);
+              state.manager.calcSingleNodeSizeDerivatives(shownNode);
+            }
+            // UI
+            ui.composites.graph.updateNodeSizes();
+          },
+
+          updateNodeLabelTexts(){
+            // Data
+            for(let i=0; i<state.parsedData.nodes.length; i++){
+              const parsedNode = state.parsedData.nodes[i],
+                shownNode = state.shownData.nodes[i];
+              shownNode.label = state.manager.calcSingleNodeLabelText(parsedNode);
+            }
+            // UI
+            ui.composites.graph.createNodeLabels();
+          },
+
+          updateNodeLabelSizes(){
+            // Data
+            for(let i=0; i<state.parsedData.nodes.length; i++){
+              const parsedNode = state.parsedData.nodes[i],
+                shownNode = state.shownData.nodes[i];
+              shownNode.label_size = state.manager.calcSingleNodeLabelSize(parsedNode);
+              state.manager.calcSingleNodeLabelSizeDerivatives(shownNode);
+            }
+            // UI
+            ui.composites.graph.createNodeLabels();
+          },
+
+          updateNodeLabelRotations(){
+            // Performance improvement: Completely remove rotation transform if angle is 0.0
+            if(state.nodeLabelRotation === 0.0){
+              if(state.showNodeLabelBorders){
+                state.currentGraphParts.nodeLabelBackground
+                  .attr("transform", null);
+              }
+              state.currentGraphParts.nodeLabel
+                .attr("transform", null);
+            }
+            // Note: Update on every node move is required, transform uses absolute (x, y) position
+            ui.composites.graph.updateNodeLabelPositions();
+          },
+
+          updateNodeImageSizes(){
+            // Data
+            for(let i=0; i<state.parsedData.nodes.length; i++){
+              const parsedNode = state.parsedData.nodes[i],
+                shownNode = state.shownData.nodes[i];
+              state.manager.calcSingleNodeSizeDerivatives(shownNode);
+            }
+            // UI
+            ui.composites.graph.updateNodeImageSizes();
+            ui.composites.graph.updateNodeImagePositions();
+            ui.composites.graph.updateNodeLabelPlacements();
+          },
+
+          updateEdgeSizes(){
+            // Data
+            const edgeSizeNormalizer = state.manager.createEdgeSizeNormalizer();
+            for(let i=0; i<state.parsedData.edges.length; i++){
+              const parsedEdge = state.parsedData.edges[i],
+                shownEdge = state.shownData.edges[i];
+              shownEdge.size = state.manager.calcSingleEdgeSize(parsedEdge, edgeSizeNormalizer);
+            }
+            // UI
+            ui.composites.graph.updateEdgeSizes();
+          },
+
+          updateEdgeCurvatures(){
+            // Data
+            for(let i=0; i<state.parsedData.edges.length; i++){
+              const parsedEdge = state.parsedData.edges[i],
+                shownEdge = state.shownData.edges[i];
+              shownEdge.multi_edge_curvature_factor = state.manager.calcSingleEdgeCurvatureFactor(parsedEdge);
+            }
+            // UI
+            ui.composites.graph.updateEdgePositions();
+            ui.composites.graph.updateEdgeLabelPositions();
+          },
+
+          updateEdgeLabelTexts(){
+            // Data
+            for(let i=0; i<state.parsedData.edges.length; i++){
+              const parsedEdge = state.parsedData.edges[i],
+                shownEdge = state.shownData.edges[i];
+              shownEdge.label = state.manager.calcSingleEdgeLabelText(parsedEdge);
+            }
+            // UI
+            ui.composites.graph.createEdgeLabels();
+          },
+
+          updateEdgeLabelSizes(){
+            // Data
+            for(let i=0; i<state.parsedData.edges.length; i++){
+              const parsedEdge = state.parsedData.edges[i],
+                shownEdge = state.shownData.edges[i];
+              shownEdge.label_size = state.manager.calcSingleEdgeLabelSize(parsedEdge);
+            }
+            // UI
+            ui.composites.graph.createEdgeLabels();
+          },
+
+          updateEdgeLabelRotations(){
+            // Performance improvement: Completely remove rotation transform if angle is 0.0
+            if(state.edgeLabelRotation === 0.0){
+              if(state.showEdgeLabelBorders){
+                state.currentGraphParts.edgeLabelBackground
+                  .attr("transform", null);
+              }
+              state.currentGraphParts.edgeLabel
+                .attr("transform", null);
+            }
+            ui.composites.graph.updateEdgeLabelPositions();
+          },
+        }
+      }
+
+      const ui = {
+        symbols:{
+          // Choice of symbols is influenced by their appearance in different browsers
+          // Alternatives: "▼", "▽", "▾" / "▲", "△", "▴" / "▶", "▷", "▸" / "◀", "◁", "◂"
+          // ▶ is rendered strangely on some mobile phone browsers, ▸ remains normal
+          detailsShown: "▾",
+          detailsHidden: "▴",
+          menuShown: "▸",
+          menuHidden: "◂",
+          menuItemActive: "▸",
+          menuItemInactive: "▾",
+        },
+
+        elements:{
+          // Containers
+          mainContainer: document.getElementById("i3OD9luevsU3NQZy4-main-div"),
+          tooltipContainer: document.getElementById("i3OD9luevsU3NQZy4-tooltip-div"),
+          leftContainer: document.getElementById("i3OD9luevsU3NQZy4-left-div"),
+          rightContainer: document.getElementById("i3OD9luevsU3NQZy4-right-div"),
+          graphContainer: document.getElementById("i3OD9luevsU3NQZy4-graph-div"),
+          detailsContainer: document.getElementById("i3OD9luevsU3NQZy4-details-div"),
+          detailsHead: document.getElementById("i3OD9luevsU3NQZy4-details-head"),
+          detailsBody: document.getElementById("i3OD9luevsU3NQZy4-details-body"),
+          // Data sources
+          dataHead: document.getElementById("i3OD9luevsU3NQZy4-data-head"),
+          dataBody: document.getElementById("i3OD9luevsU3NQZy4-data-body"),
+          graphSelectionContainer: document.getElementById("i3OD9luevsU3NQZy4-graph-select-div"),
+          graphSelection: document.getElementById("i3OD9luevsU3NQZy4-graph-select"),
+          nodeSizeDataSourceSelect: document.getElementById("i3OD9luevsU3NQZy4-node-size-data-source-select"),
+          nodeSizeNormalizationCheckbox: document.getElementById("i3OD9luevsU3NQZy4-node-size-normalization-checkbox"),
+          nodeSizeNormalizationContainer: document.getElementById("i3OD9luevsU3NQZy4-node-size-norm-div"),
+          nodeSizeNormalizationMinText: document.getElementById("i3OD9luevsU3NQZy4-node-size-normalization-min-text"),
+          nodeSizeNormalizationMinSlider: document.getElementById("i3OD9luevsU3NQZy4-node-size-normalization-min-slider"),
+          nodeSizeNormalizationMaxText: document.getElementById("i3OD9luevsU3NQZy4-node-size-normalization-max-text"),
+          nodeSizeNormalizationMaxSlider: document.getElementById("i3OD9luevsU3NQZy4-node-size-normalization-max-slider"),
+          edgeSizeDataSourceSelect: document.getElementById("i3OD9luevsU3NQZy4-edge-size-data-source-select"),
+          edgeSizeNormalizationCheckbox: document.getElementById("i3OD9luevsU3NQZy4-edge-size-normalization-checkbox"),
+          edgeSizeNormalizationContainer: document.getElementById("i3OD9luevsU3NQZy4-edge-size-norm-div"),
+          edgeSizeNormalizationMinText: document.getElementById("i3OD9luevsU3NQZy4-edge-size-normalization-min-text"),
+          edgeSizeNormalizationMinSlider: document.getElementById("i3OD9luevsU3NQZy4-edge-size-normalization-min-slider"),
+          edgeSizeNormalizationMaxText: document.getElementById("i3OD9luevsU3NQZy4-edge-size-normalization-max-text"),
+          edgeSizeNormalizationMaxSlider: document.getElementById("i3OD9luevsU3NQZy4-edge-size-normalization-max-slider"),
+          // General
+          generalHead: document.getElementById("i3OD9luevsU3NQZy4-general-head"),
+          generalBody: document.getElementById("i3OD9luevsU3NQZy4-general-body"),
+          resetButton: document.getElementById("i3OD9luevsU3NQZy4-reset"),
+          fullscreenButton: document.getElementById("i3OD9luevsU3NQZy4-fullscreen-button"),
+          svgExportButton: document.getElementById("i3OD9luevsU3NQZy4-svg"),
+          pngExportButton: document.getElementById("i3OD9luevsU3NQZy4-png"),
+          jpgExportButton: document.getElementById("i3OD9luevsU3NQZy4-jpg"),
+          // Nodes
+          nodeHead: document.getElementById("i3OD9luevsU3NQZy4-node-head"),
+          nodeBody: document.getElementById("i3OD9luevsU3NQZy4-node-body"),
+          nodeCheckbox: document.getElementById("i3OD9luevsU3NQZy4-node-checkbox"),
+          nodeSizeFactorText: document.getElementById("i3OD9luevsU3NQZy4-node-size-factor-text"),
+          nodeSizeFactorSlider: document.getElementById("i3OD9luevsU3NQZy4-node-size-factor-slider"),
+          nodeDragFixCheckbox: document.getElementById("i3OD9luevsU3NQZy4-node-drag-fix-checkbox"),
+          nodeHoverNeighborhoodCheckbox: document.getElementById("i3OD9luevsU3NQZy4-node-hover-neighborhood-checkbox"),
+          nodeHoverTooltipCheckbox: document.getElementById("i3OD9luevsU3NQZy4-node-hover-tooltip-checkbox"),
+          nodeReleaseButton: document.getElementById("i3OD9luevsU3NQZy4-node-release-button"),
+          // Node images
+          nodeImageHead: document.getElementById("i3OD9luevsU3NQZy4-node-image-head"),
+          nodeImageBody: document.getElementById("i3OD9luevsU3NQZy4-node-image-body"),
+          nodeImageCheckbox: document.getElementById("i3OD9luevsU3NQZy4-node-image-checkbox"),
+          nodeImageMetaControl: document.getElementById("i3OD9luevsU3NQZy4-node-image-meta-control"),
+          nodeImageSizeFactorText: document.getElementById("i3OD9luevsU3NQZy4-node-image-size-factor-text"),
+          nodeImageSizeFactorSlider: document.getElementById("i3OD9luevsU3NQZy4-node-image-size-factor-slider"),
+          // Node labels
+          nodeLabelHead: document.getElementById("i3OD9luevsU3NQZy4-node-label-head"),
+          nodeLabelBody: document.getElementById("i3OD9luevsU3NQZy4-node-label-body"),
+          nodeLabelCheckbox: document.getElementById("i3OD9luevsU3NQZy4-node-label-checkbox"),
+          nodeLabelBorderCheckbox: document.getElementById("i3OD9luevsU3NQZy4-node-label-border-checkbox"),
+          nodeLabelTextDataSourceSelect: document.getElementById("i3OD9luevsU3NQZy4-node-label-data-source-select"),
+          nodeLabelSizeFactorText: document.getElementById("i3OD9luevsU3NQZy4-node-label-size-factor-text"),
+          nodeLabelSizeFactorSlider: document.getElementById("i3OD9luevsU3NQZy4-node-label-size-factor-slider"),
+          nodeLabelRotationText: document.getElementById("i3OD9luevsU3NQZy4-node-label-rotation-text"),
+          nodeLabelRotationSlider: document.getElementById("i3OD9luevsU3NQZy4-node-label-rotation-slider"),
+          // Edges
+          edgeHead: document.getElementById("i3OD9luevsU3NQZy4-edge-head"),
+          edgeBody: document.getElementById("i3OD9luevsU3NQZy4-edge-body"),
+          edgeCheckbox: document.getElementById("i3OD9luevsU3NQZy4-edge-checkbox"),
+          edgeSizeFactorText: document.getElementById("i3OD9luevsU3NQZy4-edge-size-factor-text"),
+          edgeSizeFactorSlider: document.getElementById("i3OD9luevsU3NQZy4-edge-size-factor-slider"),
+          edgeCurvatureText: document.getElementById("i3OD9luevsU3NQZy4-edge-curvature-text"),
+          edgeCurvatureSlider: document.getElementById("i3OD9luevsU3NQZy4-edge-curvature-slider"),
+          edgeHoverTooltipCheckbox: document.getElementById("i3OD9luevsU3NQZy4-edge-hover-tooltip-checkbox"),
+          // Edge labels
+          edgeLabelHead: document.getElementById("i3OD9luevsU3NQZy4-edge-label-head"),
+          edgeLabelBody: document.getElementById("i3OD9luevsU3NQZy4-edge-label-body"),
+          edgeLabelCheckbox: document.getElementById("i3OD9luevsU3NQZy4-edge-label-checkbox"),
+          edgeLabelBorderCheckbox: document.getElementById("i3OD9luevsU3NQZy4-edge-label-border-checkbox"),
+          edgeLabelTextDataSourceSelect: document.getElementById("i3OD9luevsU3NQZy4-edge-label-data-source-select"),
+          edgeLabelSizeFactorText: document.getElementById("i3OD9luevsU3NQZy4-edge-label-size-factor-text"),
+          edgeLabelSizeFactorSlider: document.getElementById("i3OD9luevsU3NQZy4-edge-label-size-factor-slider"),
+          edgeLabelRotationText: document.getElementById("i3OD9luevsU3NQZy4-edge-label-rotation-text"),
+          edgeLabelRotationSlider: document.getElementById("i3OD9luevsU3NQZy4-edge-label-rotation-slider"),
+          // Layout algorithm
+          layoutAlgorithmHead: document.getElementById("i3OD9luevsU3NQZy4-layout-algorithm-head"),
+          layoutAlgorithmBody: document.getElementById("i3OD9luevsU3NQZy4-layout-algorithm-body"),
+          simulationCheckbox: document.getElementById("i3OD9luevsU3NQZy4-simulation-active-checkbox"),
+          manyBodyForceCheckbox: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-checkbox"),
+          manyBodyForceContainer: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-div"),
+          manyBodyForceStrengthText: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-strength-text"),
+          manyBodyForceStrengthSlider: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-strength-slider"),
+          manyBodyForceThetaText: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-theta-text"),
+          manyBodyForceThetaSlider: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-theta-slider"),
+          manyBodyForceMinDistCheckbox: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-min-distance-checkbox"),
+          manyBodyForceMinDistContainer: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-min-distance-div"),
+          manyBodyForceMinDistText: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-min-distance-text"),
+          manyBodyForceMinDistSlider: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-min-distance-slider"),
+          manyBodyForceMaxDistCheckbox: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-max-distance-checkbox"),
+          manyBodyForceMaxDistContainer: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-max-distance-div"),
+          manyBodyForceMaxDistText: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-max-distance-text"),
+          manyBodyForceMaxDistSlider: document.getElementById("i3OD9luevsU3NQZy4-many-body-force-max-distance-slider"),
+          linksForceCheckbox: document.getElementById("i3OD9luevsU3NQZy4-links-force-checkbox"),
+          linksForceContainer: document.getElementById("i3OD9luevsU3NQZy4-links-force-div"),
+          linksForceDistanceText: document.getElementById("i3OD9luevsU3NQZy4-links-force-distance-text"),
+          linksForceDistanceSlider: document.getElementById("i3OD9luevsU3NQZy4-links-force-distance-slider"),
+          linksForceStrengthText: document.getElementById("i3OD9luevsU3NQZy4-links-force-strength-text"),
+          linksForceStrengthSlider: document.getElementById("i3OD9luevsU3NQZy4-links-force-strength-slider"),
+          collisionForceCheckbox: document.getElementById("i3OD9luevsU3NQZy4-collision-force-checkbox"),
+          collisionForceContainer: document.getElementById("i3OD9luevsU3NQZy4-collision-force-div"),
+          collisionForceRadiusText: document.getElementById("i3OD9luevsU3NQZy4-collision-force-radius-text"),
+          collisionForceRadiusSlider: document.getElementById("i3OD9luevsU3NQZy4-collision-force-radius-slider"),
+          collisionForceStrengthText: document.getElementById("i3OD9luevsU3NQZy4-collision-force-strength-text"),
+          collisionForceStrengthSlider: document.getElementById("i3OD9luevsU3NQZy4-collision-force-strength-slider"),
+          xPositioningForceCheckbox: document.getElementById("i3OD9luevsU3NQZy4-x-positioning-force-checkbox"),
+          xPositioningForceContainer: document.getElementById("i3OD9luevsU3NQZy4-x-positioning-force-div"),
+          xPositioningForceStrengthText: document.getElementById("i3OD9luevsU3NQZy4-x-positioning-force-strength-text"),
+          xPositioningForceStrengthSlider: document.getElementById("i3OD9luevsU3NQZy4-x-positioning-force-strength-slider"),
+          yPositioningForceCheckbox: document.getElementById("i3OD9luevsU3NQZy4-y-positioning-force-checkbox"),
+          yPositioningForceContainer: document.getElementById("i3OD9luevsU3NQZy4-y-positioning-force-div"),
+          yPositioningForceStrengthText: document.getElementById("i3OD9luevsU3NQZy4-y-positioning-force-strength-text"),
+          yPositioningForceStrengthSlider: document.getElementById("i3OD9luevsU3NQZy4-y-positioning-force-strength-slider"),
+          centeringForceCheckbox: document.getElementById("i3OD9luevsU3NQZy4-centering-force-checkbox"),
+        },
+
+        composites:{
+          responsiveContainer:{
+            init(){
+              // Delete all contained items (relevant only for reset, not first creation)
+              ui.deleteChildElements(ui.elements.graphContainer);
+              ui.deleteChildElements(ui.elements.detailsBody);
+              // Menu
+              if(state.showMenu){
+                ui.composites.menu.show();
+              } else{
+                ui.composites.menu.hide();
+              }
+              // Details
+              if(state.showDetails){
+                ui.composites.details.show(true);
+              } else{
+                ui.composites.details.hide(true);
+              }
+              // Divs
+              ui.composites.responsiveContainer.setInnerHeights();
+              ui.composites.responsiveContainer.setOuterHeights();
+              ui.composites.responsiveContainer.getInnerWidths();
+            },
+
+            getInnerWidths(){
+              state.graphContainerWidth = parseInt(ui.elements.graphContainer.clientWidth);
+              state.detailsContainerWidth = parseInt(ui.elements.detailsContainer.clientWidth);
+            },
+
+            getInnerHeights(){
+              state.graphContainerHeight = parseInt(ui.elements.graphContainer.clientHeight);
+              if(state.showDetails){
+                state.detailsContainerHeight = parseInt(ui.elements.detailsContainer.clientHeight);
+              }
+            },
+
+            setInnerHeights(){
+              ui.elements.graphContainer.style.height = state.graphContainerHeight + "px";
+              ui.elements.detailsContainer.style.height = state.detailsContainerHeight + "px";
+            },
+
+            setOuterHeights(){
+              ui.elements.mainContainer.style.height = ui.elements.leftContainer.offsetHeight + "px";
+            },
+
+            getSizes(){
+              ui.composites.responsiveContainer.getInnerWidths();
+              ui.composites.responsiveContainer.getInnerHeights();
+            },
+
+            setSizes(){
+              ui.composites.responsiveContainer.setInnerHeights();
+              ui.composites.responsiveContainer.setOuterHeights();
+            },
+
+            adaptToResize(){
+              ui.composites.responsiveContainer.getSizes();
+              ui.composites.responsiveContainer.setSizes();
+            },
+
+            adaptToFullscreen(){
+              ui.composites.responsiveContainer.getSizes();
+              if(document.fullscreenElement){
+                // On entering fullscreen, remember the current container heights
+                state.beforeFullscreenGraphContainerHeight = state.graphContainerHeight;
+                state.beforeFullscreenDetailsContainerHeight = state.detailsContainerHeight;
+                // and then adapt them to maximum height possible in full screen mode
+                function calculateFullscreenMaxGraphHeight(){
+                  let outerHeight = null;
+                  try{
+                    const mainDivComputedStyle = window.getComputedStyle(ui.elements.mainContainer),
+                      graphDivComputedStyle = window.getComputedStyle(ui.elements.graphContainer),
+                      paddingTop = parseFloat(mainDivComputedStyle.paddingTop),
+                      borderTop = parseFloat(graphDivComputedStyle.borderTopWidth),
+                      borderBottom = parseFloat(graphDivComputedStyle.borderBottomWidth),
+                      paddingBottom = parseFloat(mainDivComputedStyle.paddingBottom);
+                    outerHeight = paddingTop + borderTop + borderBottom + paddingBottom;
+                    if(!isFinite(outerHeight) || outerHeight === null){
+                      throw "Invalid number";
+                    }
+                  } catch(e){
+                    // Hard coded fallback, depends on CSS of containers (1px borders, 6px padding)
+                    outerHeight = 1 + 3 + 3 + 1;
+                  }
+                  let graphHeight = screen.height - outerHeight;
+                  if(state.showDetails){
+                    graphHeight -= ui.composites.details.calculateHeightDifference();
+                  }
+                  return graphHeight;
+                }
+                state.graphContainerHeight = calculateFullscreenMaxGraphHeight();
+              } else{
+                // On leaving fullscreen, set container heights back to remembered values
+                state.graphContainerHeight = state.beforeFullscreenGraphContainerHeight;
+                state.detailsContainerHeight = state.beforeFullscreenDetailsContainerHeight;
+              }
+              ui.composites.responsiveContainer.setSizes();
+            },
+          },
+
+          menu:{
+            show(){
+              ui.elements.leftContainer.style.width = "80%";
+              ui.elements.rightContainer.style.width = "20%";
+              ui.elements.rightContainer.style.display = "block";
+            },
+
+            hide(){
+              ui.elements.leftContainer.style.width = "100%";
+              ui.elements.rightContainer.style.width = "0%";
+              ui.elements.rightContainer.style.display = "none";
+            },
+
+            toggle(){
+              // Update menu button
+              const div = ui.elements.menuToggleDiv;
+              state.showMenu = !state.showMenu;
+              if(state.showMenu){
+                div.innerText = ui.symbols.menuShown;
+                ui.composites.menu.show();
+              } else {
+                div.innerHTML = ui.symbols.menuHidden;
+                ui.composites.menu.hide();
+              }
+
+              // Update rest of UI
+              ui.composites.responsiveContainer.getInnerWidths();
+              ui.composites.responsiveContainer.getInnerHeights();
+              ui.composites.responsiveContainer.setOuterHeights();
+              ui.composites.graph.updateGraphDrawingArea();
+            },
+
+            setItem(keyElement, valElement, toActive){
+              const currentText = keyElement.innerHTML;
+              let sliceStart = 0;
+              if(currentText.startsWith(ui.symbols.menuItemActive)){
+                sliceStart = ui.symbols.menuItemActive.length;
+              } else if (currentText.startsWith(ui.symbols.menuItemInactive)){
+                sliceStart = ui.symbols.menuItemInactive.length;
+              }
+              if(toActive){
+                keyElement.innerHTML = ui.symbols.menuItemActive + currentText.slice(sliceStart);
+                keyElement.style.backgroundColor = "#f5f5f5";
+                keyElement.style.color = "black";
+                keyElement.style.borderColor = "#999";
+                keyElement.style.boxShadow = "0px 0px 3px rgba(0, 0, 0, 0.35)";
+                valElement.style.display = "block";
+              } else {
+                keyElement.innerHTML = ui.symbols.menuItemInactive + currentText.slice(sliceStart);
+                keyElement.style.backgroundColor = "white";
+                keyElement.style.color = "#222";
+                keyElement.style.borderColor = "#ccc";
+                keyElement.style.boxShadow = "0px 0px 3px rgba(0, 0, 0, 0.2)";
+                valElement.style.display = "none";
+              }
+            },
+
+            toggleItem(keyElement, valElement){
+              const toActive = !(valElement.style.display !== "none");
+              ui.composites.menu.setItem(keyElement, valElement, toActive);
+            },
+          },
+
+          details:{
+            calculateHeightDifference(){
+              let outerHeight = null;
+              try{
+                const graphContainerComputedStyle = window.getComputedStyle(ui.elements.graphContainer),
+                  detailsContainerComputedStyle = window.getComputedStyle(ui.elements.detailsContainer),
+                  border1 = parseFloat(graphContainerComputedStyle.borderBottomWidth),
+                  margin = parseFloat(detailsContainerComputedStyle.marginTop),
+                  border2 = parseFloat(detailsContainerComputedStyle.borderTopWidth);
+                outerHeight = border1 + margin + border2;
+                if(!isFinite(outerHeight) || outerHeight === null){
+                  throw "Invalid number";
+                }
+              } catch(e){
+                // Hard coded fallback, depends on CSS of containers (1px borders, 5px margin)
+                outerHeight = 7.0;
+              }
+              return state.detailsContainerHeight + outerHeight
+            },
+
+            show(init=false){
+              // Visibility
+              ui.elements.detailsContainer.style.display = "block";
+              if(!init){
+                // Height
+                const heightDiff = ui.composites.details.calculateHeightDifference();
+                state.graphContainerHeight -= heightDiff;
+                if(state.graphContainerHeight < 70){
+                  state.graphContainerHeight = 70;
+                }
+                // Update rest of UI
+                ui.composites.responsiveContainer.setSizes();
+                ui.composites.graph.updateGraphDrawingArea();
+              }
+            },
+
+            hide(init=false){
+              // Visibility
+              ui.elements.detailsContainer.style.display = "none";
+              if(!init){
+                // Height
+                const heightDiff = ui.composites.details.calculateHeightDifference();
+                state.graphContainerHeight += heightDiff;
+                // Update rest of UI
+                ui.composites.responsiveContainer.setSizes();
+                ui.composites.graph.updateGraphDrawingArea();
+              }
+            },
+
+            toggle(){
+              // Update details button
+              const toggleDiv = ui.elements.detailsToggleDiv;
+              state.showDetails = !state.showDetails;
+              if(state.showDetails){
+                toggleDiv.innerText = ui.symbols.detailsShown;
+                ui.composites.details.show();
+              } else {
+                toggleDiv.innerHTML = ui.symbols.detailsHidden;
+                ui.composites.details.hide();
+              }
+            },
+          },
+
+          download:{
+            png(filename){
+              ui.composites.download._rasterImage(filename, "png");
+            },
+
+            jpg(filename){
+              ui.composites.download._rasterImage(filename, "jpeg");
+            },
+
+            svg(filename){
+              if(state.shownData.general.node_image_fetching_failed){
+                ui.composites.download._warnAboutMissingImage();
+              }
+              const svgText = ui.composites.download._getSvgText();
+              // Blob to overcome size limitations for data URLs (e.g. 4MB in Chrome)
+              const mimeType = "image/svg+xml",
+                blob = new Blob([svgText], {type: mimeType});
+              ui.composites.download._blobToFileDownload(blob, filename);
+            },
+
+            _getSvgText(){
+              const svgElement = ui.elements.graphContainer.getElementsByTagName("svg")[0];
+              let svgText = svgElement.outerHTML;
+              if(!svgText.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+                svgText = svgText.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+              }
+              if(!svgText.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)){
+                svgText = svgText.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+              }
+              svgText = '<?xml version="1.0" standalone="no"?>\r\n' + svgText;
+              return svgText;
+            },
+
+            _getSvgDataUrl(){
+              const svgText = ui.composites.download._getSvgText();
+              return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText);
+            },
+
+            _rasterImage(filename, format, resolutionFactor=5.0){
+              if(state.shownData.general.node_image_fetching_failed){
+                ui.composites.download._warnAboutMissingImage();
+              }
+              const svg = ui.elements.graphContainer.getElementsByTagName("svg")[0],
+                width = svg.getAttribute("width"),
+                height = svg.getAttribute("height"),
+                image = new Image;
+              image.src = ui.composites.download._getSvgDataUrl();
+              image.onload = function(){
+                const canvas = document.createElement("canvas");
+                canvas.setAttribute("width", width*resolutionFactor);
+                canvas.setAttribute("height", height*resolutionFactor);
+                const context = canvas.getContext("2d");
+                context.drawImage(image, 0, 0, width*resolutionFactor, height*resolutionFactor);
+                const mimeType = "image/" + format;
+                function finishedBlobCallback(blob){
+                  ui.composites.download._blobToFileDownload(blob, filename);
+                }
+                // Blob to overcome size limitations for data URLs (e.g. 4MB in Chrome)
+                canvas.toBlob(finishedBlobCallback, mimeType, 1.0);
+              }
+            },
+
+            _warnAboutMissingImage(){
+              const message = "Caution: " +
+                "Some images inside the nodes of the graph may be missing in the " +
+                "downloaded picture. Their URLs could not be converted to data URLs. " +
+                "This can have different reasons. For example, the provided image URL may " +
+                "be incorrect, your internet connection may be interrupted, the server that " +
+                "provides the images may not be responsive, or the server's security settings " +
+                "may prevent fetching images via JavaScript code.";
+              alert(message);
+            },
+
+            _blobToFileDownload(blob, filename){
+              const url = URL.createObjectURL(blob),
+                a = document.createElement("a");
+              function handleClick(){
+                setTimeout(function(){
+                  // Long waiting time before removal for slow devices like mobile phones
+                  URL.revokeObjectURL(url);
+                  this.removeEventListener("click", handleClick);
+                }, 20000);
+              };
+              document.body.appendChild(a);
+              a.href = url;
+              a.download = filename;
+              a.addEventListener("click", handleClick, false);
+              a.click();
+              document.body.removeChild(a);
+            },
+          },
+
+          selection(element, optionList, valueList=undefined) {
+            while(element.hasChildNodes()){
+              element.removeChild(element.firstChild);
+            }
+            for(let i=0; i<optionList.length; i++){
+              let text = optionList[i];
+              let value = text;
+              if(valueList){
+                value = valueList[i];
+              }
+              let opt = document.createElement("option");
+              opt.appendChild(document.createTextNode(text));
+              opt.value = value;
+              element.appendChild(opt);
+            }
+          },
+
+          tooltip:{
+            show(xShift=null, yShift=null){
+              if(isFinite(xShift) && xShift !== null){
+                ui.elements.tooltipContainer.style.left =  parseInt(xShift) + "px";
+              }
+              if(isFinite(yShift) && yShift !== null){
+                ui.elements.tooltipContainer.style.top = parseInt(yShift) + "px";
+              }
+              ui.elements.tooltipContainer.style.transition = "visibility 0s, opacity 0.1s";
+              ui.elements.tooltipContainer.style.visibility = "visible";
+              ui.elements.tooltipContainer.style.opacity = 1.0;
+            },
+
+            hide(){
+              ui.elements.tooltipContainer.style.transition = "visibility 0.3s, opacity 0.3s ease-in";
+              ui.elements.tooltipContainer.style.visibility = "hidden";
+              ui.elements.tooltipContainer.style.opacity = 0.0;
+            },
+          },
+
+          progressBar:{
+            create(){
+              // Main container
+              this.mainContainer = document.createElement("div");
+              this.mainContainer.id = "i3OD9luevsU3NQZy4-progress-container";
+              this.mainContainer.style.backgroundColor = state.shownData.general.background_color;
+              ui.elements.graphContainer.style.backgroundColor = state.shownData.general.background_color;
+              // Text container
+              const numNodes = state.parsedData.nodes.length;
+              this.textContainer = document.createElement("div");
+              this.textContainer.innerText = "Large graph with " + numNodes + " nodes. Calculating an initial layout before visualizing it.";
+              this.textContainer.style.textAlign = "center";
+              // Bar container
+              this.outerBarContainer = document.createElement("div");
+              this.outerBarContainer.style.border = "1px solid black";
+              this.outerBarContainer.style.borderRadius = "4px";
+              this.outerBarContainer.style.marginTop = "1ex";
+              this.outerBarContainer.style.padding = "1px";
+              this.innerBarContainer = document.createElement("div");
+              this.innerBarContainer.style.backgroundColor = "black";
+              this.innerBarContainer.style.width = "0%";
+              this.innerBarContainer.style.height = "8px";
+              this.innerBarContainer.style.borderRadius = "3px";
+              // Add them to DOM

@@ -1,0 +1,807 @@
+              this.outerBarContainer.appendChild(this.innerBarContainer);
+              this.mainContainer.appendChild(this.textContainer);
+              this.mainContainer.appendChild(this.outerBarContainer);
+              ui.elements.graphContainer.appendChild(this.mainContainer);
+            },
+
+            update(percentage){
+              this.innerBarContainer.style.width = percentage + "%";
+            },
+
+            remove(){
+              ui.elements.graphContainer.removeChild(this.mainContainer);
+            }
+          },
+
+          graph:{
+            createGraph(){
+              // Remove existing elements
+              ui.deleteChildElements(ui.elements.graphContainer);
+
+              // Create new elements
+              // - Menu toggle button
+              if(state.showMenuToggleButton){
+                const menuDiv = document.createElement("div");
+                if(state.showMenu){
+                  menuDiv.innerText = ui.symbols.menuShown;
+                } else {
+                  menuDiv.innerText = ui.symbols.menuHidden;
+                }
+                menuDiv.id = "i3OD9luevsU3NQZy4-menu-toggle-button";
+                menuDiv.onclick = ui.composites.menu.toggle;
+                ui.elements.graphContainer.appendChild(menuDiv);
+                ui.elements.menuToggleDiv = menuDiv;
+              }
+
+              // - Details toggle button
+              if(state.showDetailsToggleButton){
+                const detailsDiv = document.createElement("div");
+                if(state.showDetails){
+                  detailsDiv.innerText = ui.symbols.detailsShown;
+                } else {
+                  detailsDiv.innerText = ui.symbols.detailsHidden;
+                }
+                detailsDiv.id = "i3OD9luevsU3NQZy4-details-toggle-button";
+                detailsDiv.onclick = ui.composites.details.toggle;
+                ui.elements.graphContainer.appendChild(detailsDiv);
+                ui.elements.detailsToggleDiv = detailsDiv;
+              }
+
+              // - Graph drawing area
+              const svg = d3.select("#i3OD9luevsU3NQZy4-graph-div").append("svg");
+              state.currentGraphParts.svg = svg;
+              svg
+                .attr("width", state.graphContainerWidth)
+                .attr("height", state.graphContainerHeight);
+              // - Background rectangle
+              const backgroundRect = svg.append("rect")
+                .attr("id", "i3OD9luevsU3NQZy4-background")
+                .attr("width", state.graphContainerWidth)
+                .attr("height", state.graphContainerHeight)
+                .attr("fill", state.shownData.general.background_color);
+              state.currentGraphParts.backgroundRect = backgroundRect;
+              // - Zoomable and draggable group as graph drawing area
+              const view = svg.append("g").attr("id", "i3OD9luevsU3NQZy4-zoomable-graph-group");
+              state.currentGraphParts.view = view;
+              function zoomed(event) {
+                view.attr("transform", event.transform);
+              }
+              const zoom = d3.zoom()
+                .on("zoom", zoomed);
+              state.currentGraphParts.zoom = zoom;
+              const xShift = parseInt(ui.elements.graphContainer.clientWidth) / 2.0,
+                yShift = parseInt(ui.elements.graphContainer.clientHeight) / 2.0;
+              svg
+                .call(zoom)
+                .call(zoom.transform, d3.zoomIdentity.translate(xShift, yShift).scale(state.initZoomFactor))
+                .on("dblclick.zoom", null);
+
+              // - Bind data to DOM elements
+              //   Note: Elements are creates in separate group elements to have layers that are in front or back
+              ui.composites.graph.bindGraphDataToViewDOM(state.shownData, view);
+
+              // - Add representations for all graph elements and
+              //   add movement of graph elements by force-directed layout simulation
+              //   Note: This is done differently for small or large graphs
+              const numNodes = state.shownData.nodes.length;
+              if(numNodes <= state.largeGraphThreshold){
+                // Small graph: shown immediately, moving from begin on
+                ui.composites.graph.createSimulation();
+                ui.composites.graph.createAllGraphElements()
+                ui.composites.graph.simulationManager.simulation.on(
+                  "tick", ui.composites.graph.updateAllActiveElementPositions);
+              } else {
+                // Large graph: shown after initial layout, moving only on later user interaction
+                if(state.layoutAlgorithmActive) {
+                  ui.composites.graph.createSimulation();
+                  ui.composites.graph.calcLayoutWithProgressBar();
+                } else{
+                  ui.composites.graph.createSimulation();
+                  ui.composites.graph.createAllGraphElements()
+                  ui.composites.graph.simulationManager.simulation.on("tick", function(){
+                    ui.composites.graph.removeAllGraphElements();
+                    ui.composites.graph.calcLayoutWithProgressBar();
+                  });
+                }
+              }
+            },
+
+            updateGraphDrawingArea(){
+              state.currentGraphParts.svg
+                .attr("width", state.graphContainerWidth)
+                .attr("height", state.graphContainerHeight);
+              state.currentGraphParts.backgroundRect
+                .attr("width", state.graphContainerWidth)
+                .attr("height", state.graphContainerHeight);
+            },
+
+            bindGraphDataToViewDOM(data, view){
+              // Note: The order of the following groups decides which SVG elements are drawn
+              //       in back and which are drawn in front (there is no z-order property in SVG)
+              // Edges
+              state.currentGraphParts.edgeMainGroup = view.append("g")
+                .attr("id", "i3OD9luevsU3NQZy4-edge-group")
+                .style("display", ui.convert.boolToDisplayStyle(state.showEdges));
+              state.currentGraphParts.edgeGroups = state.currentGraphParts.edgeMainGroup
+                .selectAll("g")
+                .data(data.edges)
+                .join("g");
+              // Nodes
+              state.currentGraphParts.nodeMainGroup = view.append("g")
+                .attr("id", "i3OD9luevsU3NQZy4-node-group")
+                .style("display", ui.convert.boolToDisplayStyle(state.showNodes));
+              state.currentGraphParts.nodeGroups = state.currentGraphParts.nodeMainGroup
+                .selectAll("g")
+                .data(data.nodes)
+                .join("g");
+              // Edge labels: minimal data duplication in DOM by storing only indices to original array
+              const edgeLabelData = [];
+              for(let i=0; i<data.edges.length; i++){
+                edgeLabelData.push(i);
+              }
+              state.currentGraphParts.edgeLabelMainGroup = view.append("g")
+                .attr("id", "i3OD9luevsU3NQZy4-edge-label-group")
+                .style("display", ui.convert.boolToDisplayStyle(state.showEdgeLabels));
+              state.currentGraphParts.edgeLabelGroups = state.currentGraphParts.edgeLabelMainGroup
+                .selectAll("g")
+                .data(edgeLabelData)
+                .join("g");
+              // Node labels: minimal data duplication in DOM by storing only indices to original array
+              const nodeLabelData = [];
+              for (let i=0; i<data.nodes.length; i++){
+                nodeLabelData.push(i);
+              }
+              state.currentGraphParts.nodeLabelMainGroup = view.append("g")
+                .attr("id", "i3OD9luevsU3NQZy4-node-label-group");
+              state.currentGraphParts.nodeLabelGroups = state.currentGraphParts.nodeLabelMainGroup
+                .style("display", ui.convert.boolToDisplayStyle(state.showNodeLabels))
+                .selectAll("g")
+                .data(nodeLabelData)
+                .join("g");
+              // Node images
+              const nodeImageData = [];
+              if(state.parsedData.general.contains_node_image){
+                for(let i=0; i<data.nodes.length; i++){
+                  const node = data.nodes[i];
+                  if(node.image){
+                    nodeImageData.push(i);
+                  }
+                }
+              }
+              state.currentGraphParts.nodeImageMainGroup = view.append("g")
+                .attr("id", "i3OD9luevsU3NQZy4-node-image-group")
+                .style("display", ui.convert.boolToDisplayStyle(state.showNodeImages));
+              state.currentGraphParts.nodeImageGroups = state.currentGraphParts.nodeImageMainGroup
+                .selectAll("g")
+                .data(nodeImageData)
+                .join("g");
+            },
+
+            calcLayoutWithProgressBar(){
+              // Irregular update of element positions
+              state.parsedData.tickCounter = 0;
+              state.parsedData.tickRefresher = 3;
+              function updateEveryNthTick(){
+                state.parsedData.tickCounter++;
+                if(state.parsedData.tickCounter >= state.parsedData.tickRefresher){
+                  state.parsedData.tickCounter = 0;
+                  ui.composites.graph.updateAllActiveElementPositions();
+                }
+              }
+              // Prevent spending a large portion of calculation time close to alpha min (0.001)
+              const numNodes = state.shownData.nodes.length;
+              if(numNodes >= 25000){
+                ui.composites.graph.simulationManager.simulation.alphaMin(0.03);
+                state.parsedData.tickRefresher = 15;
+              } else if(numNodes >= 10000){
+                ui.composites.graph.simulationManager.simulation.alphaMin(0.02);
+                state.parsedData.tickRefresher = 7;
+              } else if(numNodes >= 5000){
+                ui.composites.graph.simulationManager.simulation.alphaMin(0.01);
+                state.parsedData.tickRefresher = 5;
+              }
+              state.parsedData.startAlpha = ui.composites.graph.simulationManager.simulation.alpha();
+              state.parsedData.stopAlpha = ui.composites.graph.simulationManager.simulation.alphaMin();
+              state.parsedData.rangeAlpha = state.parsedData.startAlpha - state.parsedData.stopAlpha;
+              // - Progress bar: only if large graph, stops simulation to get initial static image
+              // Layout start
+              ui.composites.progressBar.create();
+              // Layout update
+              ui.composites.graph.simulationManager.simulation.on("tick", function(){
+                const currentAlpha = ui.composites.graph.simulationManager.simulation.alpha(),
+                  remaining = (currentAlpha - state.parsedData.stopAlpha) / state.parsedData.rangeAlpha,
+                  progressPercentage = (1.0 - remaining) * 100.0;
+                ui.composites.progressBar.update(progressPercentage);
+              });
+              // Layout finished
+              ui.composites.graph.simulationManager.simulation.on("end", function(){
+                ui.composites.graph.simulationManager.simulation.on("end", null);
+                ui.composites.graph.simulationManager.simulation.on("tick", null);
+                // Remove progress bar and show graph
+                ui.composites.progressBar.remove();
+                ui.composites.graph.createAllGraphElements();
+                // Afterwards: Update element positions not on every tick but only on every n-th tick
+                ui.composites.graph.simulationManager.simulation.on("tick", updateEveryNthTick);
+                ui.composites.graph.simulationManager.simulation.on("end", ui.composites.graph.updateAllActiveElementPositions);
+              });
+            },
+
+            createAllGraphElements(){
+              ui.composites.graph.createNodes();
+              ui.composites.graph.createEdges();
+              ui.composites.graph.createEdgeLabels();
+              ui.composites.graph.createNodeLabels();
+              ui.composites.graph.createNodeImages();
+            },
+
+            removeAllGraphElements(){
+              ui.composites.graph.removeNodes();
+              ui.composites.graph.removeEdges();
+              ui.composites.graph.removeEdgeLabels();
+              ui.composites.graph.removeNodeLabels();
+              ui.composites.graph.removeNodeImages();
+            },
+
+            updateAllActiveElementPositions(){
+              if(state.showNodes){
+                ui.composites.graph.updateNodePositions();
+              }
+              if(state.showNodeImages){
+                ui.composites.graph.updateNodeImagePositions();
+              }
+              if(state.showNodeLabels){
+                ui.composites.graph.updateNodeLabelPositions();
+              }
+              if(state.showEdges || state.showEdgeLabels){
+                // Caution: updateEdgeLabelPositions() depends on data calculated in updateEdgePositions()
+                ui.composites.graph.updateEdgePositions();
+              }
+              if(state.showEdgeLabels){
+                ui.composites.graph.updateEdgeLabelPositions();
+              }
+            },
+
+            createSimulation(){
+              ui.composites.graph.simulationManager.initialize();
+              if(!state.layoutAlgorithmActive){
+                ui.composites.graph.simulationManager.stop();
+              }
+              ui.composites.graph.simulationManager.setAllForces();
+            },
+
+            // Nodes
+            createNodes(){
+              const nodeGroups = state.currentGraphParts.nodeGroups;
+              // 1) Remove existing elements
+              ui.composites.graph.removeNodes();
+              // 2) Create new elements
+              // - Node shape
+              state.currentGraphParts.nodeCircles = nodeGroups.filter(d => (d.shape != "rectangle" && d.shape != "hexagon")).append("circle")
+                .attr("fill", d => d.color)
+                .attr("opacity", d => d.opacity)
+                .attr("r", d => d.size_half)
+                .attr("stroke", d => d.border_color)
+                .attr("stroke-width", d => d.border_size);
+              state.currentGraphParts.nodeRectangles = nodeGroups.filter(d => d.shape == "rectangle").append("rect")
+                .attr("fill", d => d.color)
+                .attr("opacity", d => d.opacity)
+                .attr("width", d => d.size)
+                .attr("height", d => d.size)
+                .attr("stroke", d => d.border_color)
+                .attr("stroke-width", d => d.border_size);
+              state.currentGraphParts.nodeHexagons = nodeGroups.filter(d => d.shape == "hexagon").append("path")
+                .attr("fill", d => d.color)
+                .attr("opacity", d => d.opacity)
+                .attr("stroke", d => d.border_color)
+                .attr("stroke-width", d => d.border_size);
+              // - Node hover behavior 1: tooltip
+              // http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
+              if(state.parsedData.general.contains_node_hover){
+                const nodeHover = nodeGroups.filter(d => d.hover)
+                  .on("mouseover.tooltip", function(event, d){
+                    if(state.nodeHoverTooltip){
+                      ui.elements.tooltipContainer.innerHTML = d.hover;
+                      const cont = ui.elements.mainContainer,
+                        contAbsX = cont.offsetLeft,
+                        contAbsY = cont.offsetTop,
+                        contBoundingRect = cont.getBoundingClientRect(),
+                        contClientX = contBoundingRect.left,
+                        contClientY = contBoundingRect.top,
+                        contWidth = contBoundingRect.width;
+                      let deltaX = event.clientX - contClientX,
+                        deltaY = event.clientY - contClientY,
+                        deltaXMax = contWidth * 0.85;
+                      if(deltaX > deltaXMax){
+                        deltaX = deltaXMax;
+                      }
+                      const xShift = contAbsX + deltaX + 7,
+                        yShift = contAbsY + deltaY + 14;
+                      ui.composites.tooltip.show(xShift, yShift);
+                    }
+                  })
+                  .on("mouseout.tooltip", function(event, d){
+                    if(state.nodeHoverTooltip){
+                      ui.composites.tooltip.hide();
+                    }
+                  });
+              }
+              // Node hover behavior 2: Highlighting incident edges and adjacent nodes
+              // https://bl.ocks.org/almsuarez/4333a12d2531d6c1f6f22b74f2c57102
+              function setNodeOpacityByAdjacency(d, node, adjacentNodes, lowerOpacity){
+                if(adjacentNodes.has(d) || d === node){
+                  return 1.0;
+                } else{
+                  return lowerOpacity;
+                }
+              }
+              function setEdgeOpacityByIncidence(d, incidentEdges, lowerOpacity){
+                if(incidentEdges.has(d)){
+                  return 1.0;
+                } else{
+                  return lowerOpacity;
+                }
+              }
+              function resetOpacity(d){
+                return 1.0;
+              }
+              function highlightNodeNeighborhood(event, node){
+                if(state.nodeHoverNeighborhood){
+                  const adjacentNodes = state.shownData.adjacency.map.get(node),
+                    incidentEdges = state.shownData.incidence.map.get(node);
+                  if(state.showNodes){
+                    state.currentGraphParts.nodeGroups
+                      .attr("opacity", d => setNodeOpacityByAdjacency(d, node, adjacentNodes, 0.2));
+                  }
+                  if(state.showNodeImages){
+                    state.currentGraphParts.nodeImageGroups
+                      .attr("opacity", dIndex => setNodeOpacityByAdjacency(state.shownData.nodes[dIndex], node, adjacentNodes, 0.12));
+                  }
+                  if(state.showNodeLabels){
+                    state.currentGraphParts.nodeLabelGroups
+                      .attr("opacity", dIndex => setNodeOpacityByAdjacency(state.shownData.nodes[dIndex], node, adjacentNodes, 0.07));
+                  }
+                  if(state.showEdges){
+                    state.currentGraphParts.edgeGroups
+                      .attr("opacity", d => setEdgeOpacityByIncidence(d, incidentEdges, 0.07));
+                  }
+                  if(state.showEdgeLabels){
+                    state.currentGraphParts.edgeLabelGroups
+                      .attr("opacity", dIndex => setEdgeOpacityByIncidence(state.shownData.edges[dIndex], incidentEdges, 0.07));
+                  }
+                }
+              }
+              function unhighlightNodeNeighborhood(event, node){
+                if(state.nodeHoverNeighborhood){
+                  if(state.showNodes){
+                    state.currentGraphParts.nodeGroups
+                      .attr("opacity", resetOpacity);
+                  }
+                  if(state.showNodeImages){
+                    state.currentGraphParts.nodeImageGroups
+                      .attr("opacity", resetOpacity);
+                  }
+                  if(state.showNodeLabels){
+                    state.currentGraphParts.nodeLabelGroups
+                      .attr("opacity", resetOpacity);
+                  }
+                  if(state.showEdges){
+                    state.currentGraphParts.edgeGroups
+                      .attr("opacity", resetOpacity);
+                  }
+                  if(state.showEdgeLabels){
+                    state.currentGraphParts.edgeLabelGroups
+                      .attr("opacity", resetOpacity);
+                  }
+                }
+              }
+              nodeGroups.on("mouseover.neighborhood", highlightNodeNeighborhood);
+              nodeGroups.on("mouseout.neighborhood", unhighlightNodeNeighborhood);
+              // - Node click behavior: details in separate container
+              function nodeClicked(event, node){
+                let htmlText = "<div>Node: " + String(node.id) + "</div>";
+                if(typeof(node.click) !== "undefined" && node.click !== ""){
+                  htmlText += '<div id="i3OD9luevsU3NQZy4-details-user-provided">' + node.click + '</div>';
+                }
+                ui.elements.detailsBody.innerHTML = htmlText;
+              }
+              nodeGroups.on("click", nodeClicked);
+              // - Node drag behavior: position fixation or release
+              // https://stackoverflow.com/questions/42605261/d3-event-active-purpose-in-drag-dropping-circles
+              function dragNodes(simulation) {
+                let xAtDragStart = undefined,
+                  yAtDragStart = undefined;
+                function dragstarted(event, d){
+                  if(!event.active && state.layoutAlgorithmActive) {
+                    simulation.alphaTarget(0.3).restart();
+                  }
+                  d.fx = d.x;
+                  d.fy = d.y;
+                  if(!state.nodeDragFix){
+                    xAtDragStart = d.x;
+                    yAtDragStart = d.y;
+                  }
+                }
+                function dragged(event, d){
+                  d.fx = event.x;
+                  d.fy = event.y;
+                  if(!state.layoutAlgorithmActive){
+                    d.x = d.fx;
+                    d.y = d.fy;
+                    ui.composites.graph.updateAllActiveElementPositions();
+                  }
+                }
+                function dragended(event, d){
+                  if (!event.active) {
+                    simulation.alphaTarget(0.0);
+                  }
+                  if(!state.layoutAlgorithmActive){
+                    simulation.stop();
+                  }
+                  if(!state.nodeDragFix){
+                    // Release a node if clicked and dragged a bit, but not if just clicked
+                    if(Math.abs(event.x - xAtDragStart) > 0.1 || Math.abs(event.y - yAtDragStart) > 0.1){
+                      d.fx = null;
+                      d.fy = null;
+                    }
+                  }
+                }
+                return d3.drag()
+                  .on("start", dragstarted)
+                  .on("drag", dragged)
+                  .on("end", dragended);
+              }
+              state.currentGraphParts.nodeGroups
+                .call(dragNodes(ui.composites.graph.simulationManager.simulation));
+              // 3) Position new elements
+              ui.composites.graph.updateNodePositions();
+            },
+
+            removeNodes(){
+              state.currentGraphParts.nodeGroups.selectAll("*").remove();
+            },
+
+            updateNodeVisibilities(){
+              state.currentGraphParts.nodeMainGroup.style("display", ui.convert.boolToDisplayStyle(state.showNodes));
+              ui.composites.graph.updateNodePositions();
+            },
+
+            updateNodeSizes(){
+              ui.composites.graph.createNodes();
+              // Update elements depending on node size
+              ui.composites.graph.createEdges();
+              ui.composites.graph.createNodeLabels();
+              ui.composites.graph.updateNodeImageSizes();
+              ui.composites.graph.updateNodeImagePositions();
+              ui.composites.graph.updateEdgeLabelPositions();
+            },
+
+            updateNodePositions(){
+              state.currentGraphParts.nodeCircles
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+              state.currentGraphParts.nodeRectangles
+                .attr("x", d => d.x - d.size_half)
+                .attr("y", d => d.y - d.size_half);
+              state.currentGraphParts.nodeHexagons
+                .attr("d", function(d){
+                  const r = d.size_for_hexagon_r,
+                    rh = d.size_for_hexagon_rh,
+                    rs = d.size_for_hexagon_rs,
+                    x0 = d.x + r,
+                    y0 = d.y,
+                    x1 = d.x + rh,
+                    y1 = d.y + rs,
+                    x2 = d.x - rh,
+                    y2 = y1,
+                    x3 = d.x - r,
+                    y3 = d.y,
+                    x4 = x2,
+                    y4 = d.y - rs,
+                    x5 = x1,
+                    y5 = y4;
+                  return "M " + x0 + " " + y0 + " L " + x1 + " " + y1 + " L " + x2 + " " + y2 +
+                    " L " + x3 + " " + y3 + " L " + x4 + " " + y4 + " L " + x5 + " " + y5 + " Z";
+                });
+            },
+
+            // Node images
+            createNodeImages(){
+              const nodeImageGroups = state.currentGraphParts.nodeImageGroups,
+                data = state.shownData;
+              // 1) Remove existing elements
+              ui.composites.graph.removeNodeImages();
+              // 2) Create new elements
+              state.currentGraphParts.nodeImages = nodeImageGroups.append("image")
+                .style("pointer-events", "none")
+                .attr("height", dIndex => data.nodes[dIndex].image_size)
+                .attr("width", dIndex => data.nodes[dIndex].image_size)
+                .attr("xlink:href", function(dIndex){
+                  const imageElement = this,
+                    originalImageUrl = data.nodes[dIndex].image,
+                    nodeId = data.nodes[dIndex].id;
+                  fetch(originalImageUrl)
+                    // Try to fetch the data from the original URL and store the image as new data URL
+                    .then(function(response){return response.blob();})
+                    .then(function(blob){
+                      const reader = new FileReader();
+                      reader.addEventListener("load", function () {
+                        d3.select(imageElement).attr("xlink:href", reader.result);
+                      }, false);
+                      reader.readAsDataURL(blob);
+                    })
+                    // If failed keep the original URL (e.g. because server does not allow CORS)
+                    .catch(function(error){
+                      const message = 'Warning: Fetching image for node ' + nodeId + ' with ' +
+                        'URL "' + originalImageUrl + '" failed.';
+                      console.log(message);
+                      state.shownData.general.node_image_fetching_failed = true;
+                    });
+                  return originalImageUrl;
+                });
+
+              // 3) Position new elements
+              ui.composites.graph.updateNodeImagePositions();
+            },
+
+            removeNodeImages(){
+              state.currentGraphParts.nodeImageGroups.selectAll("*").remove();
+            },
+
+            updateNodeImagePositions(){
+              state.currentGraphParts.nodeImages
+                .attr("x", function(dIndex){
+                  const node = state.shownData.nodes[dIndex];
+                  return node.x - node.image_size_half;
+                })
+                .attr("y", function(dIndex){
+                  const node = state.shownData.nodes[dIndex];
+                  return node.y - node.image_size_half;
+                })
+            },
+
+            updateNodeImageSizes(){
+              const data = state.shownData;
+              state.currentGraphParts.nodeImages
+                .attr("height", dIndex => data.nodes[dIndex].image_size)
+                .attr("width", dIndex => data.nodes[dIndex].image_size)
+            },
+
+            // Node labels
+            createNodeLabels(){
+              const nodeLabelGroups = state.currentGraphParts.nodeLabelGroups,
+                data = state.shownData;
+              // 1) Remove existing elements
+              ui.composites.graph.removeNodeLabels();
+              // 2) Create new elements
+              // - Node label backgrounds
+              if(state.showNodeLabelBorders){
+                state.currentGraphParts.nodeLabelBackground = nodeLabelGroups.append("text")
+                  .attr("text-anchor", "middle")
+                  .attr("dy", dIndex => data.nodes[dIndex].relative_label_placement)
+                  .attr("font-size", dIndex => data.nodes[dIndex].label_size)
+                  .style("pointer-events", "none")
+                  .style("stroke", state.shownData.general.background_color)
+                  .style("stroke-width", 2.0)
+                  .text(dIndex => data.nodes[dIndex].label);
+                if(state.nodeLabelFont !== null){
+                  state.currentGraphParts.nodeLabelBackground
+                    .attr("font-family", state.nodeLabelFont);
+                }
+              }
+
+              // - Node label texts
+              state.currentGraphParts.nodeLabel = nodeLabelGroups.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", dIndex => data.nodes[dIndex].relative_label_placement)
+                .attr("font-size", dIndex => data.nodes[dIndex].label_size)
+                .style("pointer-events", "none")
+                .style("fill", dIndex => data.nodes[dIndex].label_color)
+                .text(dIndex => data.nodes[dIndex].label);
+              if(state.nodeLabelFont !== null){
+                state.currentGraphParts.nodeLabel
+                  .attr("font-family", state.nodeLabelFont);
+              }
+              // 3) Position new elements
+              ui.composites.graph.updateNodeLabelPositions();
+            },
+
+            removeNodeLabels(){
+              state.currentGraphParts.nodeLabelGroups.selectAll("*").remove();
+            },
+
+            updateNodeLabelPositions(){
+              // Translation (via fast SVG text position)
+              if(state.showNodeLabelBorders){
+                state.currentGraphParts.nodeLabelBackground
+                  .attr("x", dIndex => state.shownData.nodes[dIndex].x)
+                  .attr("y", dIndex => state.shownData.nodes[dIndex].y);
+              }
+              state.currentGraphParts.nodeLabel
+                .attr("x", dIndex => state.shownData.nodes[dIndex].x)
+                .attr("y", dIndex => state.shownData.nodes[dIndex].y);
+              // Rotation (via slow SVG transform)
+              if(state.nodeLabelRotation !== 0.0){
+                function rotate(dIndex){
+                  const angle = -state.nodeLabelRotation,
+                    node = state.shownData.nodes[dIndex];
+                  return "rotate(" + angle + "," + node.x + "," + node.y + ")";
+                }
+                if(state.showNodeLabelBorders){
+                  state.currentGraphParts.nodeLabelBackground
+                    .attr("transform", rotate);
+                }
+                state.currentGraphParts.nodeLabel
+                  .attr("transform", rotate);
+              }
+            },
+
+            updateNodeLabelPlacements(){
+              if(state.showNodeLabelBorders){
+                state.currentGraphParts.nodeLabelBackground
+                  .attr("dy", dIndex => state.shownData.nodes[dIndex].relative_label_placement);
+              }
+              state.currentGraphParts.nodeLabel
+                .attr("dy", dIndex => state.shownData.nodes[dIndex].relative_label_placement);
+            },
+
+            // Edges
+            createEdges(){
+              const edgeGroups = state.currentGraphParts.edgeGroups,
+                data = state.shownData,
+                svg = state.currentGraphParts.svg,
+                arrowSize = state.shownData.general.arrow_size;
+
+              // 1) Remove existing elements
+              ui.composites.graph.removeEdges();
+              svg.select("#i3OD9luevsU3NQZy4-arrow-marker").remove();
+              // 2) Create new elements
+              // - Paths
+              state.currentGraphParts.edgePaths = edgeGroups.append("path")
+                .attr("fill", "none")
+                .attr("stroke", d => d.color)
+                .attr("stroke-opacity", d => d.opacity)
+                .attr("stroke-width", d => d.size)
+                .attr("stroke-linecap", "round");
+              // - Arrow marker for directed graphs
+              if(data.general.directed){
+                const arrowSizeDouble = arrowSize * 2.0,
+                  arrowSizeHalf = arrowSize / 2.0;
+                const marker = svg.append("marker")
+                  .attr("id", "i3OD9luevsU3NQZy4-arrow-marker")
+                  .attr("markerUnits", "userSpaceOnUse")
+                  .attr("viewBox", "0 0 " + arrowSizeDouble + " " + arrowSizeDouble)
+                  .attr("refX", 0)
+                  .attr("refY", arrowSizeHalf)
+                  .attr("orient", "auto")
+                  .attr("markerWidth", arrowSize)
+                  .attr("markerHeight", arrowSize)
+                  .attr("xoverflow", "visible")
+                  .append("path")
+                    .attr("d", "M 0 0 L " + arrowSizeDouble + " " + arrowSizeHalf + " L 0 " + arrowSize + " z")
+                    .attr("fill", state.shownData.general.arrow_color)
+                state.currentGraphParts.edgePaths
+                  .attr("marker-end", "url(#i3OD9luevsU3NQZy4-arrow-marker)");
+              }
+              // - Edge hover behavior
+              if(state.parsedData.general.contains_edge_hover){
+                const edgeHover = edgeGroups.filter(d => d.hover)
+                  .on("mouseover", function(event, d){
+                    if(state.edgeHoverTooltip){
+                      ui.elements.tooltipContainer.innerHTML = d.hover;
+                      const cont = ui.elements.mainContainer,
+                        contAbsX = cont.offsetLeft,
+                        contAbsY = cont.offsetTop,
+                        contBoundingRect = cont.getBoundingClientRect(),
+                        contClientX = contBoundingRect.left,
+                        contClientY = contBoundingRect.top,
+                        contWidth = contBoundingRect.width;
+                      let deltaX = event.clientX - contClientX,
+                        deltaY = event.clientY - contClientY,
+                        deltaXMax = contWidth * 0.9;
+                      if(deltaX > deltaXMax){
+                        deltaX = deltaXMax;
+                      }
+                      const xShift = contAbsX + deltaX + 7,
+                        yShift = contAbsY + deltaY + 14;
+                      ui.composites.tooltip.show(xShift, yShift);
+                    }
+                  })
+                  .on("mouseout", function(event, d){
+                    ui.composites.tooltip.hide();
+                  });
+              }
+              // - Edge click behavior
+              function edgeClicked(event, edge){
+                let htmlText = "<div>Edge: " + String(edge.id) + "</div>";
+                if(typeof(edge.click) !== "undefined" && edge.click !== ""){
+                  htmlText += '<div id="i3OD9luevsU3NQZy4-details-user-provided">' + edge.click + '</div>';
+                }
+                ui.elements.detailsBody.innerHTML = htmlText;
+              }
+              edgeGroups.on("click", edgeClicked);
+              // 3) Position new elements
+              ui.composites.graph.updateEdgePositions();
+            },
+
+            removeEdges(){
+              state.currentGraphParts.edgeGroups.selectAll("*").remove();
+            },
+
+            updateEdgeSizes(){
+              ui.composites.graph.createEdges();
+            },
+
+            _calcStraightEdgePosition(d){
+              const uv = ui.composites.graph.calcUnitVector(d.source.x, d.source.y, d.target.x, d.target.y),
+                arrowSize = state.shownData.general.arrow_size;
+              let sourceSizeHalf = d.source.size_half,
+                targetSizeHalf = d.target.size_half;
+              if(d.source.shape == "rectangle"){
+                sourceSizeHalf = ui.composites.graph.adaptLenForRectShape(sourceSizeHalf, uv);
+              }
+              if(d.target.shape == "rectangle"){
+                targetSizeHalf = ui.composites.graph.adaptLenForRectShape(targetSizeHalf, uv);
+              }
+              const curveLength = uv.len - sourceSizeHalf - targetSizeHalf,
+                arrowSpacer = (curveLength > arrowSize) ? arrowSize : (curveLength - 0.01),
+                sourceSpacer = sourceSizeHalf + d.source.border_size_half,
+                targetSpacer = targetSizeHalf + d.target.border_size_half + arrowSpacer;
+              const xStart = d.source.x + (uv.dx * sourceSpacer),
+                yStart = d.source.y + (uv.dy * sourceSpacer),
+                xEnd = d.target.x - (uv.dx * targetSpacer),
+                yEnd = d.target.y - (uv.dy * targetSpacer);
+              d.xLabelPoint = (xStart + xEnd) / 2.0;  // equivalent: xStart + ((xEnd - xStart) / 2.0);
+              d.yLabelPoint = (yStart + yEnd) / 2.0;  // equivalent: yStart + ((yEnd - yStart) / 2.0);
+              const path = "M " + xStart + " " + yStart + " L " + xEnd + " " + yEnd;
+              return path;
+            },
+
+            _calcCurvedEdgePosition(d){
+              // Quadratic bezier curve
+              let sourceSizeHalf = d.source.size_half,
+                targetSizeHalf = d.target.size_half;
+              const arrowSize = state.shownData.general.arrow_size,
+                dx = d.target.x - d.source.x,
+                dy = d.target.y - d.source.y,
+                len = Math.sqrt(dx**2 + dy**2),
+                dxHalf = dx / 2.0,
+                dyHalf = dy / 2.0,
+                lenHalf = len / 2.0,
+                lenHalfCorrected = lenHalf + (sourceSizeHalf - targetSizeHalf) / 2.0 - arrowSize;  // equivalent: sourceSizeHalf + (len - sourceSizeHalf - targetSizeHalf) / 2.0 - arrowSize;
+                const nodeSizeCorrectionFactor = lenHalfCorrected / lenHalf,
+                xBezier = d.source.x + dxHalf * nodeSizeCorrectionFactor + (dyHalf * d.multi_edge_curvature_factor),
+                yBezier = d.source.y + dyHalf * nodeSizeCorrectionFactor - (dxHalf * d.multi_edge_curvature_factor),
+                uv1 = ui.composites.graph.calcUnitVector(d.source.x, d.source.y, xBezier, yBezier),
+                uv2 = ui.composites.graph.calcUnitVector(xBezier, yBezier, d.target.x, d.target.y);
+              if(d.source.shape == "rectangle"){
+                sourceSizeHalf = ui.composites.graph.adaptLenForRectShape(sourceSizeHalf, uv1);
+              }
+              if(d.target.shape == "rectangle"){
+                targetSizeHalf = ui.composites.graph.adaptLenForRectShape(targetSizeHalf, uv2);
+              }
+              const curveLength = (uv1.len + uv2.len) - sourceSizeHalf - targetSizeHalf,
+                arrowSpacer = (curveLength > arrowSize) ? arrowSize : (curveLength - 0.01),
+                sourceSpacer = sourceSizeHalf + d.source.border_size_half,
+                targetSpacer = targetSizeHalf + d.target.border_size_half + arrowSpacer;
+              const xStart = d.source.x + (uv1.dx * sourceSpacer),
+                yStart = d.source.y + (uv1.dy * sourceSpacer),
+                xEnd = d.target.x - (uv2.dx * targetSpacer),
+                yEnd = d.target.y - (uv2.dy * targetSpacer),
+                xMidpoint = xStart + ((xEnd - xStart) / 2.0),
+                yMidpoint = yStart + ((yEnd - yStart) / 2.0);
+              d.xLabelPoint = (xMidpoint + xBezier) / 2.0;  // equivalent: xMidpoint + ((xBezier - xMidpoint) / 2.0);
+              d.yLabelPoint = (yMidpoint + yBezier) / 2.0;  // equivalent: yMidpoint + ((yBezier - yMidpoint) / 2.0);
+              const path = "M " + xStart + " " + yStart + " Q " + xBezier + " " + yBezier + ", " + xEnd + " " + yEnd;
+              return path;
+            },
+
+            _calcSelfEdgePosition(d){
+              // Cubic bezier curve
+              let sourceSizeHalf = d.source.size_half,
+                targetSizeHalf = d.target.size_half;
+              const arrowSize = state.shownData.general.arrow_size,
+                dx = d.source.size + 10.0 * d.multi_edge_counter + 5.0 * Math.abs(d.multi_edge_curvature_factor),
+                dy = d.source.size * 1.5 + 20.0 * d.multi_edge_counter + 10.0 * Math.abs(d.multi_edge_curvature_factor);
+              let xBezier1 = null, xBezier2 = null, yBezier1 = null, yBezier2 = null;
+              if(d.multi_edge_curvature_factor >= 0.0){
+                xBezier1 = d.source.x - dx;
