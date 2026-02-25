@@ -1,0 +1,51 @@
+---
+# title: "Building the<br>AI War Cloud"
+# subtitle: "Dr. Sarah Ciston"
+# author: "CDH Open 12 June 2025"
+format: 
+    revealjs:
+        theme: "serif"
+        smaller: true
+        bottom: true
+        # center-title-slide: false
+        footer: "sarah@sarahciston.com"
+---
+
+# Building the<br>AI War Cloud {.center}
+
+Dr. Sarah Ciston
+
+Research Fellow, Center for Advanced Internet Studies, Germany
+
+CDH Open 12 June 2025 
+
+## Research question
+
+What responsibility do users have in choosing tools when machine learning tools we use daily are also used to wage war at massive scale?
+
+## Joseph Weizenbaum, 1976
+
+>"it was not technological inevitability that invented the electronic battlefield, nor was it a set of anonymous forces. **Men just like the ones who design television commercials** sat around a table and chose. [...] The lesson, therefore, is that the **scientist and technologist must, by acts of will and of the imagination, actively strive to reduce such psychological distances**, to counter the forces that tend to remove him from the consequences of his actions."
+
+## Methodology
+
+:::: {.columns}
+
+::: {.column width="40%"}
+Left column
+:::
+
+::: {.column width="60%"}
+Right column
+:::
+
+::::
+
+## Discussion
+
+More stuff
+
+## Impact
+
+The end
+
