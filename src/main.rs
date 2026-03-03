@@ -16,6 +16,7 @@
 //   cargo run --features chess -- chess-evals     # Harvest Lichess evaluations
 //   cargo run --features chess -- chess-bridge    # Generate cross-domain bridge
 
+pub mod error;
 mod model;
 mod ingest;
 #[cfg(feature = "chess")]
