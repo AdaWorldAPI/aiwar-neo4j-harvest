@@ -103,6 +103,13 @@ NEO4J_PASSWORD=xxx \
 cargo run -- neo4j
 ```
 
+## Feature Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `embed` | off | Embed graph JSON at compile time |
+| `chess` | off | Chess database harvesting (adds reqwest, csv, shakmaty, ruci) |
+
 ## Files
 
 ```
@@ -113,9 +120,38 @@ src/
   main.rs             # CLI entry point
   model.rs            # Rust types (harvested schema)
   ingest.rs           # Cypher generator with novel patterns
+  error.rs            # Error types
+  chess_ingest.rs     # Chess database harvesting (feature-gated)
+  chess_model.rs      # Chess data model
 cypher/
   aiwar_full.cypher   # Generated: all statements combined
   00_constraints.cypher
 docs/
   PATTERNS.md         # Detailed pattern analysis
 ```
+
+## Dependencies
+
+- `neo4rs` 0.8 — Official Neo4j Rust driver (Bolt protocol)
+- `serde`/`serde_json` — JSON serialization
+- `clap` 4 — CLI argument parsing
+- `tokio` — Async runtime
+- `tracing` — Structured logging
+
+## Evidence Framework (v4.3)
+
+Data entries are tagged with an `evidence_type` field:
+
+| Type | Meaning |
+|------|---------|
+| `FACT` | Verifiable from public sources |
+| `INFERENCE` | Derived from documented evidence |
+| `HYPOTHESIS` | Analytical conjecture requiring validation |
+
+## Related Projects
+
+| Repo | Role |
+|------|------|
+| [aiwar](https://github.com/AdaWorldAPI/aiwar) | Source dataset (Quarto site by Sarah Ciston) |
+| [neo4j-rs](https://github.com/AdaWorldAPI/neo4j-rs) | Rust Neo4j reimplementation (future backend) |
+| [q2](https://github.com/AdaWorldAPI/q2) | Graph notebook frontend |
